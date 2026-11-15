@@ -213,6 +213,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px soli
             <div class="field"><label for="p2Name">שם מלא</label><input id="p2Name" type="text"></div>
             <div class="field"><label for="p2Phone">טלפון</label><input id="p2Phone" type="tel"></div>
           </div>
+          <h3>אחים ואחיות</h3>
+          <div class="grid">
+            <fieldset class="field" id="sibF" style="grid-column:1/-1"><legend>האם יש לילד אחים או אחיות?</legend><div class="pills"><label class="pill"><input type="radio" name="sib" value="אין"><span>אין</span></label><label class="pill"><input type="radio" name="sib" value="יש"><span>יש</span></label></div></fieldset>
+            <div class="field" id="sibMore" hidden><label for="sibCount">כמה אחים ואחיות?</label><input id="sibCount" type="text" inputmode="numeric" placeholder="לדוגמה: 2"></div>
+            <div class="field" id="sibMore2" hidden style="grid-column:1/-1"><label for="sibAges">גילאים, ומה מקומו של הילד בין האחים</label><p class="hint">לדוגמה: אחות בת 8 ואח בן 2. הוא האמצעי.</p><input id="sibAges" type="text"></div>
+          </div>
         </div>
       </section>
 
@@ -448,7 +454,7 @@ const CHECKS = [
     ['t2','משתעל או נחנק בזמן אכילה או שתייה',''],
     ['t3','מרייר יותר ממה שמצופה בגילו',''],
     ['t4','נושם בעיקר דרך הפה, או נוחר בשינה',''],
-    ['t5','עדיין משתמש במוצץ או בבקבוק','', 3]
+    ['t5','עדיין שותה מבקבוק','', 3]
   ]}
 ];
 const INTEL = ['גם אנשים שלא מכירים אותו מבינים אותו בקלות','המשפחה מבינה אותו, אבל זרים מתקשים לפעמים','גם בני המשפחה מתקשים לפעמים להבין אותו','רוב הזמן קשה להבין אותו','לא יודע'];
@@ -477,10 +483,13 @@ const GEN_A = [
     {id:'hWalk', type:'text', label:'באיזה גיל התחיל ללכת?', half:true},
     {id:'hWords', type:'text', label:'באיזה גיל אמר מילים ראשונות?', half:true},
     {id:'hCombine', type:'text', label:'באיזה גיל התחיל לחבר שתי מילים?', half:true},
-    {id:'hMed', type:'ta', label:'מצבים רפואיים, תרופות קבועות, ניתוחים או אשפוזים'},
-    {id:'hHear', type:'text', label:'האם נבדקה שמיעה? מתי, ומה הייתה התוצאה?', ex:'לדוגמה: "לפני שנה, תקינה".'},
+    {id:'hMed', type:'ta', label:'מצבים רפואיים, תרופות קבועות או אשפוזים'},
+    {id:'hSurg', type:'radio', label:'האם הילד עבר ניתוחים?', opts:['לא','כן'], detail:'אם כן: איזה ניתוח ובאיזה גיל (לדוגמה: כפתורים באוזניים, שקדים, שחרור לשון)'},
+    {id:'hHearStat', type:'radio', label:'מצב השמיעה של הילד', opts:['שמיעה תקינה','ירידה בשמיעה','לא נבדק או לא ידוע'], detail:'אם יש ירידה: באיזו אוזן, מה סוג הירידה ומידתה, והאם משתמש במכשיר שמיעה או בשתל'},
+    {id:'hHear', type:'text', label:'מתי נבדקה השמיעה לאחרונה, ומה הייתה התוצאה?', ex:'לדוגמה: "לפני שנה, תקינה".'},
     {id:'hEars', type:'radio', label:'האם היו דלקות אוזניים חוזרות, נוזלים באוזניים או צינוריות?', opts:['לא','כן','לא יודע']},
     {id:'hVision', type:'text', label:'האם נבדקה ראייה? מה הייתה התוצאה?'},
+    {id:'hPacifier', type:'radio', label:'שימוש במוצץ', opts:['לא השתמש','השתמש בעבר והפסיק','משתמש היום','לא יודע'], detail:'פרטו: עד איזה גיל, או מתי ובאיזו תדירות היום (רק בשינה, במשך היום)'},
     {id:'hPrev', type:'ta', label:'טיפולים ואבחונים קודמים או נוכחיים', ex:'לדוגמה: קלינאית תקשורת קודמת, ריפוי בעיסוק, פסיכולוג, מכון להתפתחות הילד. אם יש דוחות, כדאי להביא אותם.'},
     {id:'hSupport', type:'text', label:'האם יש לילד סייעת, שעות שילוב או תמיכה אחרת במסגרת?'},
     {id:'hFamily', type:'ta', label:'האם במשפחה יש קשיי שפה, גמגום, לקויות למידה או ירידה בשמיעה?', ex:'הורים, אחים, סבים, דודים.'}
@@ -817,7 +826,8 @@ function collect(){
     ],
     family: [
       ['ממלא השאלון', [val('respName'), radioVal('respRel')].filter(Boolean).join(', ')], ['טלפון', val('respPhone')], ['דוא"ל', val('respEmail')],
-      ['הורה נוסף', val('p2Name')], ['טלפון הורה נוסף', val('p2Phone')]
+      ['הורה נוסף', val('p2Name')], ['טלפון הורה נוסף', val('p2Phone')],
+      ['אחים ואחיות', radioVal('sib') === 'יש' ? ['יש', val('sibCount') && `${val('sibCount')} אחים ואחיות`, val('sibAges')].filter(Boolean).join('. ') : radioVal('sib')]
     ],
     genA: GEN_A.map(s => ({title:s.title, rows:s.qs.map(q => [q.label, genericValue(q)])})),
     genB: GEN_B.map(s => ({title:s.title, rows:s.qs.map(q => [q.label, genericValue(q)]), goal: s.goal ? goalSentence() : ''})),
@@ -1170,6 +1180,7 @@ $('#newNo').addEventListener('click', () => { $('#newConfirm').hidden = true; })
 $('#newYes').addEventListener('click', () => { location.reload(); });
 
 if(IN_APP && !(window.claude && typeof window.claude.use === 'function')) $('#inAppWarn').hidden = false;
+$$('input[name=sib]').forEach(r => r.addEventListener('change', () => { const on = radioVal('sib') === 'יש'; $('#sibMore').hidden = !on; $('#sibMore2').hidden = !on; }));
 renderAgeParts(); updateGoal(); show(1);
 </script>
 
