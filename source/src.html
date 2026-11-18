@@ -1,0 +1,1229 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Bellefair&display=swap">
+<style>
+/* Layout: one calm column like a clinic intake booklet; a sticky "seed" stepper on top, white panels on a pale ground. Single light theme on purpose: it mirrors the printed PDF. */
+:root{
+  --paper:#ffffff;
+  --ground:#f3f4f1;
+  --ink:#1e1e1b;
+  --muted:#64635c;
+  --line:#dddcd4;
+  --seed:#e8b818;
+  --seed-ink:#755800;
+  --focus:#2b6a88;
+  --ok:#e3eedf; --ok-ink:#2d5527;
+  --mild:#fbefc6; --mod:#f6d9ae; --sev:#f0c6ba; --sev-ink:#7a2716;
+  --neutral:#ebebe6;
+  --err:#a1321b;
+  --font-d:"Bellefair","Frank Ruhl Libre",Georgia,serif;
+  --font-b:"Assistant","Arial Hebrew",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--font-b);font-size:17px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:780px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 72px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:400}
+p{margin:0}
+.masthead{display:flex;align-items:center;gap:20px;background:var(--paper);border-radius:14px;padding:18px 20px}
+.masthead img{height:112px;width:auto;flex:none}
+.masthead .t{min-width:0;display:flex;flex-direction:column;gap:4px}
+.masthead h1{font-family:var(--font-d);font-size:clamp(28px,6vw,40px);line-height:1.1}
+.masthead .sub{color:var(--muted);font-size:15px}
+.lead{font-size:17px;max-width:62ch}
+
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-radius:0 0 14px 14px;margin-top:-20px;padding:12px 12px 10px;box-shadow:0 6px 18px -14px rgba(30,30,27,.5)}
+.stepper ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);position:relative}
+.stepper ol::before{content:"";position:absolute;top:13px;right:12.5%;left:12.5%;height:1px;background:var(--line)}
+.stepper ol.two{grid-template-columns:repeat(2,1fr)}
+.stepper ol.two::before{right:25%;left:25%}
+.mode-contract .intake-only{display:none!important}
+.sendrow{display:flex;flex-direction:column;gap:6px;background:var(--ground);border-radius:12px;padding:12px 14px;font-size:15.5px}
+.sendrow a{color:var(--focus);font-weight:700}
+.stepper button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:14px;color:var(--muted);position:relative;padding:0 4px}
+.stepper button[disabled]{cursor:default}
+.stepper .dot{width:26px;height:26px;border-radius:50%;background:var(--paper);border:1.5px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+.stepper li.done .dot{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.stepper li.cur .dot{background:var(--seed);border-color:var(--seed);color:var(--ink)}
+.stepper li.cur button{color:var(--ink);font-weight:700}
+.stepper button:focus-visible .dot{outline:3px solid var(--focus);outline-offset:2px}
+
+.panel{background:var(--paper);border-radius:14px;padding:22px 20px;display:flex;flex-direction:column;gap:18px}
+.panel > header{display:flex;flex-direction:column;gap:6px}
+.panel h2{font-family:var(--font-d);font-size:28px;line-height:1.2;display:flex;align-items:center;gap:10px}
+.panel h2::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--seed);flex:none}
+.panel .note{color:var(--muted);font-size:15.5px;max-width:64ch}
+.panel h3{font-size:18px;font-weight:700;color:var(--seed-ink)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0;border:0;padding:0;margin:0}
+.field > label,.field > legend{font-weight:600;font-size:16px;padding:0}
+.field legend{margin-bottom:6px}
+.hint{color:var(--muted);font-size:14.5px}
+.req{color:var(--err)}
+input[type=text],input[type=tel],input[type=email],input[type=date],select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:80px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-color:var(--focus)}
+.invalid input,.invalid textarea,.invalid select,input.invalid{border-color:var(--err)}
+.sig.invalid .sigbox{border-color:var(--err);border-style:solid}
+.check.invalid > span{color:var(--err)}
+.invalid .pill span{border-color:var(--err)}
+.errmsg{color:var(--err);font-size:14.5px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative}
+.pill input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.pill span{display:inline-block;border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;font-size:15.5px;background:var(--paper)}
+.pill input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.pill input:focus-visible + span{outline:3px solid var(--focus);outline-offset:2px}
+.detail{margin-top:8px}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;font-size:14.5px}
+.legend div{display:flex;flex-direction:column;border-radius:10px;padding:8px 10px;background:var(--neutral)}
+.legend b{font-size:15px}
+.legend .ok{background:var(--ok)} .legend .mild{background:var(--mild)} .legend .mod{background:var(--mod)} .legend .sev{background:var(--sev)}
+
+.domain{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--line);padding-top:16px}
+.domain:first-of-type{border-top:0;padding-top:0}
+.domain .dhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.domain .count{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.item{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px dashed var(--line)}
+.item:last-child{border-bottom:0}
+.item .q{font-weight:600}
+.scale{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:6px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:block;text-align:center;border:1.5px solid var(--line);border-radius:9px;padding:7px 6px;font-size:14.5px;line-height:1.3;background:var(--paper)}
+.chip input:focus-visible + span{outline:3px solid var(--focus);outline-offset:2px}
+.chip input:checked + span{font-weight:700;border-color:var(--ink)}
+.chip[data-v=ok] input:checked + span{background:var(--ok);color:var(--ok-ink);border-color:var(--ok-ink)}
+.chip[data-v=mild] input:checked + span{background:var(--mild)}
+.chip[data-v=mod] input:checked + span{background:var(--mod)}
+.chip[data-v=sev] input:checked + span{background:var(--sev);color:var(--sev-ink);border-color:var(--sev-ink)}
+.chip[data-v=dk] input:checked + span,.chip[data-v=na] input:checked + span,.chip[data-v^=f] input:checked + span{background:var(--neutral)}
+.chip[data-v=f2] input:checked + span{background:var(--mod)}
+.chip[data-v=f3] input:checked + span{background:var(--sev);color:var(--sev-ink)}
+.empty{color:var(--muted);background:var(--neutral);border-radius:10px;padding:14px 16px}
+
+.checks{display:flex;flex-direction:column;gap:6px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.check input{width:20px;height:20px;margin:3px 0 0;flex:none;accent-color:var(--ink)}
+.check .hint{display:block}
+
+.goal{background:var(--ground);border-radius:12px;padding:14px 16px;font-size:16.5px}
+.goal b{color:var(--seed-ink)}
+
+.doc{display:flex;flex-direction:column;gap:14px;font-size:16px;max-width:66ch}
+.doc h3{color:var(--ink);font-size:17px}
+.doc ol{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:12px}
+.doc li p + p{margin-top:6px}
+.parties{background:var(--ground);border-radius:12px;padding:12px 14px;font-size:15.5px}
+
+.sig{display:flex;flex-direction:column;gap:6px}
+.sigbox{position:relative;border:1.5px dashed var(--muted);border-radius:12px;background:var(--paper);aspect-ratio:3/1;max-width:100%;width:100%;max-height:220px}
+.sigbox canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;border-radius:12px}
+.sigbox .ph{position:absolute;inset:auto 14px 10px auto;color:var(--muted);font-size:14px;pointer-events:none}
+.sigbox.has .ph{display:none}
+.sigbox::after{content:"";position:absolute;right:16px;left:16px;bottom:34px;border-bottom:1px solid var(--line);pointer-events:none}
+.sigrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sub-block{display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:16px}
+
+.btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+.btn{font:inherit;font-size:16.5px;font-weight:700;border-radius:999px;padding:11px 22px;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.small{font-size:14px;padding:5px 12px;font-weight:600}
+.btn.seed{background:var(--seed);border-color:var(--seed);color:var(--ink)}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn[disabled]{opacity:.55;cursor:wait}
+.privacy{display:flex;gap:10px;align-items:flex-start;background:var(--ok);color:var(--ok-ink);border-radius:12px;padding:12px 14px;font-size:15px}
+.privacy svg{flex:none;margin-top:3px}
+.status{font-size:15.5px;min-height:1.4em}
+.status.bad{color:var(--err);font-weight:600}
+.status.good{color:var(--ok-ink);font-weight:700}
+.flags{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.flags li{display:flex;gap:10px;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0;font-size:15.5px}
+.flags li span:last-child{flex:none;font-weight:700;color:var(--sev-ink)}
+.copybox{width:100%;min-height:160px;font-size:14px}
+.inline-confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--sev);border-radius:12px;padding:10px 14px}
+.foot{color:var(--muted);font-size:14px;text-align:center;display:flex;flex-direction:column;gap:2px}
+@media (max-width:520px){
+  .masthead{flex-direction:column;align-items:flex-start;gap:10px}
+  .masthead img{height:92px}
+  .stepper button{font-size:12.5px}
+  .panel{padding:18px 16px}
+  .btns .btn{flex:1 1 auto}
+}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="wrap" dir="rtl" lang="he" id="root">
+  <header class="masthead">
+    <img src="__LOGO__" alt="ד״ר אלישבע שלמון, קלינאית תקשורת, 050-2777972">
+    <div class="t">
+      <h1>__H1__</h1>
+      <p class="sub">ד״ר אלישבע שלמון · קלינאית תקשורת · <span dir="ltr">050-2777972</span> · <span dir="ltr">shevasalmon@gmail.com</span></p>
+    </div>
+  </header>
+
+  <nav class="stepper" aria-label="שלבי המילוי">
+    <ol id="stepper">
+      <li data-s="1"><button type="button"><span class="dot">1</span>שאלון</button></li>
+      <li data-s="2"><button type="button"><span class="dot">2</span>חוזה טיפולי</button></li>
+      <li data-s="3"><button type="button"><span class="dot">3</span>ויתור סודיות</button></li>
+      <li data-s="4"><button type="button"><span class="dot">4</span>שמירה</button></li>
+    </ol>
+  </nav>
+
+  <!-- STEP 1 -->
+  <section class="step" data-step="1" id="step1">
+    <div class="wrap" style="padding:0;gap:20px">
+      <p class="lead intake-only">השאלון עוזר לי להכיר את הילד לפני המפגש הראשון ולהחליט מאיפה מתחילים. אין תשובות נכונות או לא נכונות. ענו לפי מה שאתם רואים ושומעים ביום-יום, וכשאינכם בטוחים סמנו ״לא יודע״. השאלות מנוסחות בלשון זכר, והן מתייחסות לבנות ולבנים כאחד.</p>
+      <div class="privacy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>התשובות נשארות במכשיר שלכם בלבד. בסוף המילוי נוצר קובץ PDF שנשמר אצלכם, ושום מידע לא נשלח לשרת או נשמר בשום מקום אחר. את הקובץ תעבירו אליי בעצמכם.</span></div>
+
+      <div class="inline-confirm" id="inAppWarn" hidden><span><b>פתחתם את השאלון מתוך אפליקציה (וואטסאפ, פייסבוק או אינסטגרם).</b> באפליקציות האלה לפעמים אי אפשר לשמור את קובץ ה-PDF בסוף. לפני שמתחילים, פתחו את הקישור בדפדפן: בתפריט (⋮ או ···) בחרו "פתיחה בדפדפן", "Open in Chrome" או "Open in Safari".</span></div>
+      <section class="panel" id="secDetails">
+        <header><h2 id="detailsTitle">פרטי הילד והמשפחה</h2><p class="note">שדות המסומנים בכוכבית הם חובה. את שאר הפרטים אפשר להשלים גם בפגישה.</p></header>
+        <div class="grid">
+          <div class="field"><label for="childName">שם הילד <span class="req">*</span></label><input id="childName" type="text" autocomplete="off"></div>
+          <div class="field"><label for="birthDate">תאריך לידה</label><input id="birthDate" type="date"></div>
+          <div class="field intake-only"><label for="ageManual">גיל <span class="req">*</span></label><input id="ageManual" type="text" inputmode="decimal" placeholder="לדוגמה: 4 או 4.5"><p class="hint" id="ageHint">אם הזנתם תאריך לידה, הגיל מחושב לבד.</p></div>
+          <fieldset class="field intake-only" id="sexF"><legend>מין</legend><div class="pills"><label class="pill"><input type="radio" name="sex" value="בן"><span>בן</span></label><label class="pill"><input type="radio" name="sex" value="בת"><span>בת</span></label></div></fieldset>
+          <div class="field"><label for="childId">תעודת זהות של הילד</label><input id="childId" type="text" inputmode="numeric" maxlength="9" autocomplete="off"><p class="hint" id="childIdHint">תשע ספרות, כולל ספרת ביקורת.</p></div>
+          <div class="field intake-only"><label for="hmo">קופת חולים</label><select id="hmo"><option value="">בחרו</option><option>כללית</option><option>מכבי</option><option>מאוחדת</option><option>לאומית</option><option>אחר</option></select></div>
+          <div class="field intake-only"><label for="address">כתובת מגורים</label><input id="address" type="text"></div>
+          <div class="field intake-only"><label for="framework">מסגרת חינוכית</label><input id="framework" type="text" placeholder="שם הגן או בית הספר, וכיתה"></div>
+        </div>
+        <div class="sub-block">
+          <h3 id="respTitle">ממלא השאלון</h3>
+          <div class="grid">
+            <div class="field"><label for="respName">שם מלא <span class="req">*</span></label><input id="respName" type="text" autocomplete="name"></div>
+            <fieldset class="field" id="respRelF"><legend>קרבה לילד</legend><div class="pills"><label class="pill"><input type="radio" name="respRel" value="אם"><span>אם</span></label><label class="pill"><input type="radio" name="respRel" value="אב"><span>אב</span></label><label class="pill"><input type="radio" name="respRel" value="אפוטרופוס/ית"><span>אפוטרופוס/ית</span></label><label class="pill"><input type="radio" name="respRel" value="אחר"><span>אחר</span></label></div></fieldset>
+            <div class="field"><label for="respPhone">טלפון</label><input id="respPhone" type="tel" autocomplete="tel"></div>
+            <div class="field"><label for="respEmail">דוא״ל</label><input id="respEmail" type="email" autocomplete="email" dir="ltr"></div>
+          </div>
+          <h3>הורה נוסף</h3>
+          <div class="grid">
+            <div class="field"><label for="p2Name">שם מלא</label><input id="p2Name" type="text"></div>
+            <div class="field"><label for="p2Phone">טלפון</label><input id="p2Phone" type="tel"></div>
+          </div>
+          <h3 class="intake-only">אחים ואחיות</h3>
+          <div class="grid intake-only">
+            <fieldset class="field" id="sibF" style="grid-column:1/-1"><legend>האם יש לילד אחים או אחיות?</legend><div class="pills"><label class="pill"><input type="radio" name="sib" value="אין"><span>אין</span></label><label class="pill"><input type="radio" name="sib" value="יש"><span>יש</span></label></div></fieldset>
+            <div class="field" id="sibMore" hidden><label for="sibCount">כמה אחים ואחיות?</label><input id="sibCount" type="text" inputmode="numeric" placeholder="לדוגמה: 2"></div>
+            <div class="field" id="sibMore2" hidden style="grid-column:1/-1"><label for="sibAges">גילאים, ומה מקומו של הילד בין האחים</label><p class="hint">לדוגמה: אחות בת 8 ואח בן 2. הוא האמצעי.</p><input id="sibAges" type="text"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="genericA"></div>
+
+      <section class="panel intake-only" id="secSkills">
+        <header><h2>מיפוי יכולות</h2><p class="note">כל שורה מתארת יכולת. סמנו עד כמה הילד עושה אותה, בהשוואה למה שמצופה בגילו. לפי הגיל יופיעו רק היכולות שרלוונטיות לילד.</p></header>
+        <div class="legend" aria-hidden="true">
+          <div class="ok"><b>כמו בני גילו</b>עושה זאת כמו ילדים אחרים בגילו</div>
+          <div class="mild"><b>קושי קל</b>עושה, אבל פחות טוב מבני גילו</div>
+          <div class="mod"><b>קושי בינוני</b>עושה חלקית או רק עם עזרה</div>
+          <div class="sev"><b>קושי רב</b>כמעט לא עושה זאת, או בכלל לא</div>
+          <div><b>לא יודע / לא רלוונטי</b>לא בטוחים, או שזה לא מתאים לילד</div>
+        </div>
+        <div id="skills"></div>
+      </section>
+
+      <section class="panel intake-only" id="secChecks">
+        <header><h2>דיבור, שטף, קול ואכילה</h2><p class="note">סמנו כל תיאור שמתאים לילד. אם שום דבר לא מתאים, סמנו ״אין קושי בתחום זה״.</p></header>
+        <div id="checks"></div>
+      </section>
+
+      <section class="panel intake-only" id="secAttn">
+        <header><h2>קשב וריכוז</h2><p class="note">הפריטים כאן הם סימנים שכדאי לברר, לא אבחנה. אבחון קשב נעשה על ידי רופא או פסיכולוג. סמנו כמה פעמים זה קורה, בהשוואה לבני גילו.</p></header>
+        <div id="attn"></div>
+      </section>
+
+      <div id="genericB"></div>
+
+      <div class="btns"><span></span><button class="btn" type="button" id="step1Next" data-next="2">המשך לחוזה הטיפולי</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" data-step="2" id="step2" hidden>
+    <div class="wrap" style="padding:0;gap:20px">
+      <section class="panel">
+        <header><h2>חוזה טיפולי: נהלי הטיפול בקליניקה</h2><p class="note">קראו את נהלי הטיפול, מלאו את הפרטים וחתמו בתחתית.</p></header>
+        <div class="doc" id="contractDoc"></div>
+      </section>
+      <section class="panel">
+        <header><h2>פרטי החותמים</h2></header>
+        <h3>הורה / אפוטרופוס חותם</h3>
+        <div class="grid">
+          <div class="field"><label for="c1Name">שם מלא <span class="req">*</span></label><input id="c1Name" type="text"></div>
+          <div class="field"><label for="c1Id">תעודת זהות <span class="req">*</span></label><input id="c1Id" type="text" inputmode="numeric" maxlength="9" autocomplete="off"></div>
+        </div>
+        <div class="sig"><div class="sigrow"><span class="field" style="font-weight:600">חתימה <span class="req">*</span></span><button class="btn ghost small" type="button" data-clear="sig1">ניקוי</button></div><div class="sigbox" id="sig1box"><canvas id="sig1" aria-label="שטח חתימה, הורה ראשון"></canvas><span class="ph">חתמו כאן באצבע או בעכבר</span></div></div>
+        <div class="sub-block">
+          <h3>הורה / אפוטרופוס נוסף (מומלץ)</h3>
+          <div class="grid">
+            <div class="field"><label for="c2Name">שם מלא</label><input id="c2Name" type="text"></div>
+            <div class="field"><label for="c2Id">תעודת זהות</label><input id="c2Id" type="text" inputmode="numeric" maxlength="9" autocomplete="off"></div>
+          </div>
+          <div class="sig"><div class="sigrow"><span style="font-weight:600">חתימה</span><button class="btn ghost small" type="button" data-clear="sig2">ניקוי</button></div><div class="sigbox" id="sig2box"><canvas id="sig2" aria-label="שטח חתימה, הורה שני"></canvas><span class="ph">חתמו כאן באצבע או בעכבר</span></div></div>
+        </div>
+        <div class="sub-block">
+          <label class="check" id="guardWrap"><input type="checkbox" id="guardOk"><span>אני מצהיר/ה שאני הורה או אפוטרופוס חוקי של הילד, ושההורה הנוסף יודע על הטיפול ומסכים לו, או שאני מוסמך/ת להחליט על כך לבדי. <span class="req">*</span></span></label>
+          <label class="check" id="agreeWrap"><input type="checkbox" id="agreeOk"><span>אני החתום/ה מטה קראתי את הנהלים ומצאתי אותם מקובלים עליי, ולפיכך באתי על החתום. <span class="req">*</span></span></label>
+        </div>
+      </section>
+      <div class="btns"><button class="btn ghost" type="button" data-next="1">חזרה לשאלון</button><button class="btn" type="button" data-next="3">המשך לוויתור סודיות</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" data-step="3" id="step3" hidden>
+    <div class="wrap" style="padding:0;gap:20px">
+      <section class="panel">
+        <header><h2>ויתור על סודיות והסכמה להעברת מידע</h2><p class="note">כדי לתאם את הטיפול עם הגן, בית הספר, הרופא או מטפלים אחרים, אני צריכה את הסכמתכם בכתב. ההסכמה היא בחירה שלכם, היא אינה תנאי לקבלת טיפול, ואפשר לבטל אותה בכל עת.</p></header>
+        <fieldset class="field" id="wConsentF"><legend>האם אתם מאשרים העברת מידע? <span class="req">*</span></legend><div class="pills"><label class="pill"><input type="radio" name="wConsent" value="yes"><span>כן, לגורמים שאסמן</span></label><label class="pill"><input type="radio" name="wConsent" value="no"><span>לא בשלב זה</span></label></div></fieldset>
+        <div id="waiverYes" hidden>
+          <div class="doc" id="waiverDoc"></div>
+          <div class="sub-block">
+            <fieldset class="field" id="wRecF"><legend>הגורמים שמותר למסור להם מידע ולקבל מהם מידע <span class="req">*</span></legend><p class="hint">כל הגורמים מסומנים מראש. הורידו את הסימון מגורם שאינכם רוצים שיקבל מידע. אפשר גם לכתוב שם של אדם או מקום ליד גורם, למשל שם הגן.</p><div class="checks" id="wRecipients"></div></fieldset>
+            <fieldset class="field" id="wDirF"><legend>כיוון העברת המידע</legend><div class="pills"><label class="pill"><input type="radio" name="wDir" value="מסירה וקבלה של מידע" checked><span>מסירה וקבלה</span></label><label class="pill"><input type="radio" name="wDir" value="מסירת מידע בלבד"><span>מסירה בלבד</span></label><label class="pill"><input type="radio" name="wDir" value="קבלת מידע בלבד"><span>קבלה בלבד</span></label></div></fieldset>
+            <fieldset class="field" id="wValF"><legend>תוקף ההסכמה</legend><div class="pills"><label class="pill"><input type="radio" name="wVal" value="end" checked><span>עד סיום הטיפול</span></label><label class="pill"><input type="radio" name="wVal" value="12"><span>12 חודשים מיום החתימה</span></label><label class="pill"><input type="radio" name="wVal" value="date"><span>עד תאריך</span></label></div><input id="wValDate" type="date" class="detail" hidden></fieldset>
+            <div class="grid">
+              <div class="field"><label for="wName">שם החותם/ת <span class="req">*</span></label><input id="wName" type="text"></div>
+              <div class="field"><label for="wId">תעודת זהות <span class="req">*</span></label><input id="wId" type="text" inputmode="numeric" maxlength="9" autocomplete="off"></div>
+            </div>
+            <div class="sig"><div class="sigrow"><span style="font-weight:600">חתימה <span class="req">*</span></span><button class="btn ghost small" type="button" data-clear="sig3">ניקוי</button></div><div class="sigbox" id="sig3box"><canvas id="sig3" aria-label="שטח חתימה, ויתור סודיות"></canvas><span class="ph">חתמו כאן באצבע או בעכבר</span></div></div>
+          </div>
+        </div>
+      </section>
+      <div class="btns"><button class="btn ghost" type="button" data-next="2">חזרה לחוזה</button><button class="btn" type="button" data-next="4">לסיכום ושמירה</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" data-step="4" id="step4" hidden>
+    <div class="wrap" style="padding:0;gap:20px">
+      <section class="panel">
+        <header><h2>הכל מוכן לשמירה</h2><p class="note" id="sumLead"></p></header>
+        <div class="privacy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>קובץ ה-PDF נוצר כאן, בתוך הדפדפן, ונשמר רק במכשיר הזה. שלחו אותו אליי בוואטסאפ או בדוא״ל, או הביאו אותו למפגש הראשון.</span></div>
+        <div class="btns" style="justify-content:flex-start"><button class="btn seed" type="button" id="savePdf">יצירת קובץ PDF</button><button class="btn" type="button" id="sharePdf" hidden>שמירה במכשיר</button><button class="btn" type="button" id="sendPdf" hidden>שליחה</button><button class="btn ghost" type="button" id="openPdf" hidden>פתיחת ה-PDF</button></div>
+        <div class="sendrow" id="sendInfo" hidden><span><b>איך שולחים?</b> בטלפון, לחצו "שליחה" ובחרו וואטסאפ או מייל. אפשר גם לצרף את הקובץ שנשמר להודעה רגילה.</span><span>וואטסאפ: <span dir="ltr">050-2777972</span> · <a href="https://wa.me/972502777972" target="_blank" rel="noopener">פתיחת צ'אט בוואטסאפ</a></span><span>מייל: <span dir="ltr">shevasalmon@gmail.com</span></span></div>
+        <p class="status" id="saveStatus" role="status" aria-live="polite"></p>
+        <div id="flagsWrap"></div>
+      </section>
+      <section class="panel intake-only">
+        <header><h2>סיכום טקסט</h2><p class="note">אם קשה לשמור קובץ במכשיר, אפשר להעתיק את הסיכום ולהדביק אותו בהודעה. החתימות נכללות רק בקובץ ה-PDF.</p></header>
+        <div class="btns" style="justify-content:flex-start"><button class="btn ghost" type="button" id="copyBtn">העתקת הסיכום</button></div>
+        <textarea class="copybox" id="copyBox" readonly aria-label="סיכום התשובות"></textarea>
+      </section>
+      <div class="btns"><button class="btn ghost" type="button" id="step4Back" data-next="3">חזרה</button><button class="btn ghost" type="button" id="newBtn">שאלון חדש</button></div>
+      <div class="inline-confirm" id="newConfirm" hidden><span>למחוק את כל התשובות ולהתחיל מחדש? מה שלא נשמר ב-PDF יאבד.</span><button class="btn small" type="button" id="newYes">כן, למחוק</button><button class="btn ghost small" type="button" id="newNo">ביטול</button></div>
+    </div>
+  </section>
+
+  <footer class="foot"><span>כלי לאיסוף מידע לקראת אבחון וטיפול. השאלון אינו מהווה אבחון.</span><span>ד״ר אלישבע שלמון · קלינאית תקשורת · <span dir="ltr">050-2777972</span></span></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+"use strict";
+const MODE = '__MODE__';            // 'intake' = שאלון בלבד, 'contract' = חוזה וויתור סודיות
+const STEPS = MODE === 'intake' ? [1, 4] : [1, 2, 3, 4];
+/* ============ הגדרות הקליניקה. כאן משנים מחירים ותנאים ============ */
+const CONFIG = {
+  clinicianName: 'ד"ר אלישבע שלמון',
+  clinicianTitle: 'קלינאית תקשורת',
+  phone: '050-2777972',
+  email: 'shevasalmon@gmail.com',
+  license: '13-100155',
+  sessionMinutes: 45,
+  // מחירי ברירת מחדל בש"ח. אפשר לשנות למשפחה מסוימת דרך הקישור, בלי לגעת בקוד:
+  // מוסיפים לסוף הקישור #p400-m500  (p = מפגש טיפולי, m = פגישת הורים). מספיק גם רק אחד מהם, למשל #p400
+  // ערך 0 מסתיר את המחיר, ובהסכם יופיע "לפי המחירון שנמסר להורים".
+  sessionPrice: 450,
+  parentMeetingPrice: 550,
+  treatmentMinutes: 35,        // מתוך משך הפגישה: זמן הטיפול עצמו, לערך
+  cancelHours: 48
+};
+const LOGO_SRC = document.querySelector('.masthead img').src;
+const UA = navigator.userAgent || '';
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(UA) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(UA));
+const IN_APP = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Telegram|MicroMessenger|; wv\)/i.test(UA);
+(function applyPriceLink(){
+  const src = decodeURIComponent((location.hash || '') + ' ' + (location.search || ''));
+  const p = src.match(/(?:^|[#&?\s-])p=?(\d{1,5})(?!\d)/i), m = src.match(/(?:^|[#&?\s-])m=?(\d{1,5})(?!\d)/i);
+  if(p) CONFIG.sessionPrice = Number(p[1]);
+  if(m) CONFIG.parentMeetingPrice = Number(m[1]);
+})();
+const money = n => n ? `${Number(n).toLocaleString('he-IL')} ש"ח` : 'לפי המחירון שנמסר להורים';
+
+/* ============ מאגר השאלות ============ */
+const SCALE = [
+  {v:'ok', l:'כמו בני גילו'}, {v:'mild', l:'קושי קל'}, {v:'mod', l:'קושי בינוני'},
+  {v:'sev', l:'קושי רב'}, {v:'dk', l:'לא יודע'}, {v:'na', l:'לא רלוונטי'}
+];
+const FREQ = [
+  {v:'f0', l:'לא אופייני לו'}, {v:'f1', l:'לפעמים'}, {v:'f2', l:'לעיתים קרובות'},
+  {v:'f3', l:'כמעט תמיד'}, {v:'dk', l:'לא יודע'}
+];
+const DOMAINS = [
+  {id:'u', name:'הבנת שפה'},
+  {id:'e', name:'הבעה: מילים, משפטים וסיפור'},
+  {id:'s', name:'שיח ותקשורת חברתית'},
+  {id:'l', name:'קריאה, כתיבה ומודעות לצלילים'}
+];
+// [id, domain, minAge, maxAge, text, example]
+const ITEMS = [
+  ['u1','u',1,3,'מגיב כשקוראים בשמו ומסתכל לעבר מי שקרא לו','קוראים לו מהחדר השני והוא מפנה את הראש.'],
+  ['u2','u',1,3,'מצביע על חפץ או תמונה מוכרים כשמבקשים ממנו','"איפה הכלב?" כשמסתכלים יחד בספר.'],
+  ['u3','u',1.5,3.5,'מבצע בקשה פשוטה גם כשלא מראים לו בידיים','"תביא את הנעל" בלי להצביע על הנעל.'],
+  ['u6','u',2,5,'מבין שאלות "מי?", "מה?" ו"איפה?"','"מי לקח את הכדור?", "איפה הנעליים שלך?"'],
+  ['u4','u',2.5,6,'מבצע שתי בקשות שאינן קשורות זו לזו, לפי הסדר','"תשים את הכוס בכיור ותביא לי את הטלפון".'],
+  ['u5','u',2.5,6,'מבין מילות מקום','על, מתחת, בתוך, ליד, מאחורי.'],
+  ['u7','u',3.5,99,'מבין שאלות "למה?", "איך?" ו"מתי?"','"למה הילד בוכה?", "איך מכינים חביתה?"'],
+  ['u9','u',3.5,9,'מבין סיפור שהקריאו לו ועונה על שאלות עליו','יודע מי היו הדמויות, מה קרה ומה הייתה הבעיה.'],
+  ['u10','u',4,8,'מבין מילים של זמן ורצף','לפני, אחרי, קודם, בסוף, אתמול, מחר.'],
+  ['u13','u',4,99,'מבין מה אומרים לו גם כשיש רעש מסביב','בארוחה משפחתית, בהפסקה, ברכב.'],
+  ['u8','u',5,99,'מבין הוראה ארוכה עם כמה פרטים, בלי שיחזרו עליה','"קח את המחברת הכחולה מהתיק ותשים אותה על השולחן של אבא".'],
+  ['u11','u',5,99,'מבין הסברים חדשים בגן או בכיתה','חוזר הביתה ויודע מה למדו ומה צריך להכין.'],
+  ['u12','u',7,99,'מבין משמעות שאינה מילולית: בדיחות, ניבים ורמזים','"עשה מזה סיפור", "נפל לו האסימון".'],
+
+  ['e1','e',1,2.5,'משתמש בתנועות ובקולות כדי לבקש או להראות משהו','מושיט ידיים, מצביע, משמיע קול ומסתכל עליכם.'],
+  ['e2','e',1,2.5,'אומר מילים בודדות באופן קבוע','"אמא", "מים", "עוד", "די".'],
+  ['e3','e',1.75,3,'מחבר שתי מילים יחד','"עוד מים", "אבא הלך", "כדור גדול".'],
+  ['e4','e',2.5,4.5,'מדבר במשפטים קצרים של שלוש מילים ומעלה','"אני רוצה במבה", "הכלב שלי ישן".'],
+  ['e5','e',2.5,5,'משתמש נכון במילים "אני", "אתה" ו"שלי"','אומר "אני רוצה", ולא מדבר על עצמו בשמו.'],
+  ['e8','e',2.5,99,'יש לו מגוון מילים מתאים לגילו','שמות של חפצים, פעולות ותיאורים, ולא רק "זה" ו"הדבר הזה".'],
+  ['e6','e',3,8,'מתאים זכר ונקבה, יחיד ורבים','"הילדה קטנה", "שני כלבים", "הן הלכו".'],
+  ['e7','e',3.5,8,'משתמש נכון בזמנים של פעלים','"אתמול שיחקתי", "מחר אשחק".'],
+  ['e9','e',4,99,'מוצא בקלות את המילה שהוא רוצה לומר','לא נתקע באמצע ולא אומר הרבה "נו, ההוא, איך קוראים לזה".'],
+  ['e10','e',4,99,'מחבר רעיונות במשפט אחד בעזרת מילות קישור','"כי", "אבל", "אז", "כש...", "בגלל ש...".'],
+  ['e12','e',4,99,'מספר על משהו שקרה לו כך שגם מי שלא היה שם מבין','מי היה שם, מה קרה ואיך זה נגמר.'],
+  ['e13','e',5,99,'מספר סיפור לפי הסדר, עם התחלה, בעיה וסוף','מספר מחדש סרט שראה או ספר שהקריאו לו.'],
+  ['e14','e',5,99,'מסביר מה פירוש של מילה','"מה זה מטרייה?" "משהו שפותחים כשיורד גשם".'],
+  ['e11','e',5.5,99,'בונה משפטים מורכבים','"הילד שישב לידי בגן נתן לי מדבקה".'],
+  ['e15','e',6,99,'מסביר תהליך או חוקי משחק כך שמישהו אחר יבין','מסביר לחבר איך משחקים במשחק קופסה.'],
+
+  ['s1','s',1,3,'מראה לכם דברים שמעניינים אותו','מצביע על מטוס ומסתכל עליכם כדי לראות שגם אתם רואים.'],
+  ['s2','s',2,6,'משחק משחקי דמיון','מאכיל בובה, "מדבר" בטלפון צעצוע, מבשל במטבח צעצוע.'],
+  ['s3','s',2,99,'פונה לאחרים ויוזם קשר','מציע לחבר לשחק, מתחיל לספר משהו מיוזמתו.'],
+  ['s4','s',3,99,'מחכה לתורו בשיחה ומגיב למה שנאמר',''],
+  ['s6','s',3,99,'כשלא מבינים אותו, מנסה שוב בדרך אחרת','אומר במילים אחרות, מראה, מתאר.'],
+  ['s5','s',4,99,'נשאר בנושא השיחה','כשמדברים על הטיול, ממשיך לדבר על הטיול.'],
+  ['s7','s',4,99,'מתאים את הדיבור לבן השיח','מדבר אחרת לתינוק, לחבר ולמבוגר.'],
+  ['s8','s',5,99,'מבין הבעות פנים וטון דיבור של אחרים','שם לב שמישהו נעלב או כועס, גם כשלא אמרו לו את זה.'],
+  ['s9','s',6,99,'מסתדר בשיחה עם כמה ילדים יחד','מצליח להצטרף לשיחה קבוצתית ולא נשאר בצד.'],
+
+  ['l1','l',4,7,'נהנה מחרוזים ומזהה מילים שמתחרזות','"כוס" ו"סוס".'],
+  ['l2','l',4.5,7.5,'יודע לומר באיזה צליל מתחילה מילה','"במה מתחילה המילה בננה?" "ב".'],
+  ['l3','l',5.5,8,'מכיר את האותיות ואת הצלילים שלהן',''],
+  ['l4','l',6.5,99,'קורא מילים ומשפטים בקצב שמתאים לכיתה שלו',''],
+  ['l5','l',7,99,'מבין את מה שקרא','יכול לספר במילים שלו מה היה כתוב.'],
+  ['l6','l',7,99,'כותב משפטים מובנים ומאיית נכון מילים מוכרות','']
+];
+// checklists. id, name, minAge, hint, items[[id,text,example]]
+const CHECKS = [
+  {id:'art', name:'היגוי', min:2.5, items:[
+    ['a1','מחליף צליל אחד או שניים בצליל אחר','"תפוח" נשמע "טפוח", "שמש" נשמע "סמס".'],
+    ['a2','מחליף צלילים רבים, וקשה להבין חלק מהמילים',''],
+    ['a3','משמיט צלילים או הברות ממילים','"נה" במקום "בננה", "פוח" במקום "תפוח".'],
+    ['a4','צליל מסוים נשמע מעוות או לא מדויק','למשל ס או ש שנשמעים "שורקים" או יוצאים מצד הפה.'],
+    ['a5','אותה מילה נשמעת אחרת בכל פעם','']
+  ]},
+  {id:'flu', name:'שטף דיבור', min:2, extra:'אם סימנתם: מתי זה התחיל, ואיך זה השתנה מאז?', items:[
+    ['f1','חוזר על צליל, הברה או מילה','"א-א-אני", "רגע רגע רגע".'],
+    ['f2','מאריך צליל','"ממממים".'],
+    ['f3','נתקע, והמילה לא יוצאת למרות שהוא מתאמץ',''],
+    ['f4','נראה מאמץ בזמן הדיבור','מצמוץ, מתח בפנים, תנועות של הראש או הגוף.'],
+    ['f5','נמנע מלדבר או מחליף מילים כשקשה לו',''],
+    ['f6','מראה תסכול או מבוכה מהדיבור, או אומר שקשה לו לדבר','']
+  ]},
+  {id:'voi', name:'קול', min:1, items:[
+    ['v1','הקול צרוד או צורם לאורך זמן',''],
+    ['v2','מאבד את הקול לעיתים קרובות',''],
+    ['v3','מדבר חזק מאוד או חלש מאוד',''],
+    ['v4','הקול נשמע "מהאף" או סתום','']
+  ]},
+  {id:'eat', name:'אכילה, נשימה ופה', min:1, items:[
+    ['t1','מתקשה ללעוס, או נמנע ממרקמים מסוימים של אוכל',''],
+    ['t2','משתעל או נחנק בזמן אכילה או שתייה',''],
+    ['t3','מרייר יותר ממה שמצופה בגילו',''],
+    ['t4','נושם בעיקר דרך הפה, או נוחר בשינה',''],
+    ['t5','עדיין שותה מבקבוק','', 3]
+  ]}
+];
+const INTEL = ['גם אנשים שלא מכירים אותו מבינים אותו בקלות','המשפחה מבינה אותו, אבל זרים מתקשים לפעמים','גם בני המשפחה מתקשים לפעמים להבין אותו','רוב הזמן קשה להבין אותו','לא יודע'];
+const ATTN = [
+  ['at1','מתקשה להתמקד בפעילות או בשיחה לאורך זמן','באמצע סיפור מתחיל להסתכל סביב ומאבד את החוט.'],
+  ['at2','עובר מפעילות לפעילות לפני שסיים',''],
+  ['at3','מתקשה לשבת במקום כשמצופה ממנו','בארוחה, במעגל בגן, בשיעור.'],
+  ['at4','עונה או מתפרץ לפני שסיימו לשאול',''],
+  ['at5','נראה כאילו לא שמע כשפונים אליו ישירות','']
+];
+const RECIPIENTS = ['צוות הגן או בית הספר (גננת, מורה, יועצת)','רופא/ת הילדים','קופת החולים','מכון להתפתחות הילד','מטפלים נוספים (ריפוי בעיסוק, פיזיותרפיה, פסיכולוג)','משרד החינוך, ועדות זכאות ושילוב','רופא/ת אף-אוזן-גרון או מכון שמיעה','אחר'];
+
+// generic sections. type: ta | text | radio | multi
+const GEN_A = [
+  {title:'מה הביא אתכם אליי', note:'כמה שאלות פתיחה שעוזרות לי להבין מה מטריד אתכם ובאיזה הקשר.', qs:[
+    {id:'bgWhy', type:'ta', label:'מה הקושי המרכזי שבגללו פניתם?', ex:'לדוגמה: "קשה להבין אותו", "הוא לא מספר מה היה בגן", "הוא נתקע באמצע מילים", "הקריאה שלו איטית".'},
+    {id:'bgRef', type:'multi', label:'מי הציע לפנות לקלינאית תקשורת?', opts:['אנחנו, ההורים','הגננת או המורה','רופא/ת הילדים','מכון להתפתחות הילד','אחר']},
+    {id:'bgSince', type:'text', label:'מתי שמתם לב לקושי לראשונה?'},
+    {id:'bgWhen', type:'ta', label:'באילו מצבים הקושי בולט יותר, ובאילו הוא מצליח יותר?', ex:'לדוגמה: בולט כשהוא עייף או נרגש, בקבוצה או כשממהרים. מצליח יותר בבית, אחד על אחד, כשיש לו זמן.'},
+    {id:'bgCase', type:'ta', label:'תארו מקרה אחד מהשבוע האחרון שבו ראיתם את הקושי', ex:'לדוגמה: ניסה לספר על מה שקרה בהפסקה, התבלבל, ובסוף ויתר.'},
+    {id:'bgAware', type:'ta', label:'האם הילד מודע לקושי? איך הוא מגיב אליו?', ex:'לדוגמה: מתעצבן כשלא מבינים אותו, נמנע מלדבר ליד זרים, לא נראה מוטרד.'}
+  ]},
+  {title:'התפתחות ובריאות', note:'מידע על ההתפתחות המוקדמת והבריאות עוזר להבין את התמונה המלאה. מה שלא זוכרים, אפשר להשאיר ריק.', qs:[
+    {id:'hLang', type:'ta', label:'אילו שפות מדברים בבית? מי מדבר עם הילד באיזו שפה?', ex:'לדוגמה: אמא מדברת עברית, אבא רוסית, סבתא ערבית.'},
+    {id:'hBirth', type:'radio', label:'האם היו קשיים בהיריון או בלידה?', opts:['לא','כן','לא יודע'], detail:'אם כן, פרטו: לידה מוקדמת, אשפוז בפגייה, סיבוכים'},
+    {id:'hWalk', type:'text', label:'באיזה גיל התחיל ללכת?', half:true},
+    {id:'hWords', type:'text', label:'באיזה גיל אמר מילים ראשונות?', half:true},
+    {id:'hCombine', type:'text', label:'באיזה גיל התחיל לחבר שתי מילים?', half:true},
+    {id:'hMed', type:'ta', label:'מצבים רפואיים, תרופות קבועות או אשפוזים'},
+    {id:'hSurg', type:'radio', label:'האם הילד עבר ניתוחים?', opts:['לא','כן'], detail:'אם כן: איזה ניתוח ובאיזה גיל (לדוגמה: כפתורים באוזניים, שקדים, שחרור לשון)'},
+    {id:'hHearStat', type:'radio', label:'מצב השמיעה של הילד', opts:['שמיעה תקינה','ירידה בשמיעה','לא נבדק או לא ידוע'], detail:'אם יש ירידה: באיזו אוזן, מה סוג הירידה ומידתה, והאם משתמש במכשיר שמיעה או בשתל'},
+    {id:'hHear', type:'text', label:'מתי נבדקה השמיעה לאחרונה, ומה הייתה התוצאה?', ex:'לדוגמה: "לפני שנה, תקינה".'},
+    {id:'hEars', type:'radio', label:'האם היו דלקות אוזניים חוזרות, נוזלים באוזניים או צינוריות?', opts:['לא','כן','לא יודע']},
+    {id:'hVision', type:'text', label:'האם נבדקה ראייה? מה הייתה התוצאה?'},
+    {id:'hPacifier', type:'radio', label:'שימוש במוצץ', opts:['לא השתמש','השתמש בעבר והפסיק','משתמש היום','לא יודע'], detail:'פרטו: עד איזה גיל, או מתי ובאיזו תדירות היום (רק בשינה, במשך היום)'},
+    {id:'hPrev', type:'ta', label:'טיפולים ואבחונים קודמים או נוכחיים', ex:'לדוגמה: קלינאית תקשורת קודמת, ריפוי בעיסוק, פסיכולוג, מכון להתפתחות הילד. אם יש דוחות, כדאי להביא אותם.'},
+    {id:'hSupport', type:'text', label:'האם יש לילד סייעת, שעות שילוב או תמיכה אחרת במסגרת?'},
+    {id:'hFamily', type:'ta', label:'האם במשפחה יש קשיי שפה, גמגום, לקויות למידה או ירידה בשמיעה?', ex:'הורים, אחים, סבים, דודים.'}
+  ]},
+  {title:'החוזקות של הילד', note:'חשוב לי להכיר גם את מה שעובד טוב. החוזקות והתחומים שהילד אוהב הם נקודת הפתיחה לטיפול.', qs:[
+    {id:'stGood', type:'ta', label:'במה הילד טוב? מה הוא אוהב לעשות?', ex:'לדוגמה: בונה בלגו שעות, זוכר כל שיר, אוהב בעלי חיים, חברותי מאוד.'},
+    {id:'stMotiv', type:'ta', label:'מה מרגיע אותו, ומה גורם לו לשתף פעולה?'},
+    {id:'stVoice', type:'ta', label:'אם הילד היה יכול לספר על עצמו, מה הוא היה אומר?', ex:'לדוגמה: "אני יודע מה אני רוצה להגיד, אבל המילים לא יוצאות".'}
+  ]}
+];
+const GEN_B = [
+  {title:'תמונה כללית', note:'השאלה הזו עוזרת לראות את התמונה הרחבה, מעבר לפריטים הבודדים.', qs:[
+    {id:'glob', type:'radio', label:'בהשוואה לילדים אחרים בגילו שאתם מכירים, איפה הוא נמצא בדיבור ובהבנה?', ex:'למשל ילדים מהגן, מהמשפחה או מהחוג.', opts:['כמו בני גילו','קצת מאחור','פער שמי שמכיר אותו שם לב אליו','פער שבולט גם לזרים','לא יודע']}
+  ]},
+  {title:'לאן נרצה להגיע', note:'נסחו במילים שלכם מה תרצו לראות אצל הילד בעוד כמה חודשים. נשתמש בזה כשנקבע יחד את מטרות הטיפול.', goal:true, qs:[
+    {id:'goWhat', type:'ta', label:'מה תרצו שהילד יצליח לעשות?', ex:'לדוגמה: יספר מה קרה בגן כך שנבין; יבין את ההוראות של הגננת; ידבר בלי להיתקע.'},
+    {id:'goWhere', type:'ta', label:'איפה ועם מי?', ex:'לדוגמה: בבית ובגן, עם ההורים, הגננת והחברים.'},
+    {id:'goWhy', type:'ta', label:'במה זה יעזור לו ביום-יום?', ex:'לדוגמה: ירגיש בטוח לשחק עם ילדים ולא יתבייש לדבר.'}
+  ]},
+  {title:'עוד משהו', qs:[
+    {id:'more', type:'ta', label:'יש עוד משהו שחשוב לכם שאדע?'}
+  ]}
+];
+
+/* ============ עזרים ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+const radioVal = name => { const el = $(`input[name="${name}"]:checked`); return el ? el.value : ''; };
+const checkedVals = name => $$(`input[name="${name}"]:checked`).map(e => e.value);
+
+function isValidIsraeliId(id){
+  id = String(id).trim();
+  if(!/^\d{5,9}$/.test(id)) return false;
+  id = id.padStart(9,'0');
+  let sum = 0;
+  for(let i=0;i<9;i++){ let n = Number(id[i]) * ((i%2)+1); sum += n>9 ? n-9 : n; }
+  return sum % 10 === 0;
+}
+function todayStr(d=new Date()){ return d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric',year:'numeric'}); }
+function fmtDate(iso){ if(!iso) return ''; const [y,m,d] = iso.split('-'); return `${Number(d)}.${Number(m)}.${y}`; }
+function ageText(a){
+  if(a == null) return '';
+  const y = Math.floor(a), m = Math.round((a - y) * 12);
+  const yy = y === 1 ? 'שנה' : y === 2 ? 'שנתיים' : `${y} שנים`;
+  if(m === 0 || m === 12) return m===12 ? (y+1===2?'שנתיים':`${y+1} שנים`) : yy;
+  const mm = m === 1 ? 'חודש' : m === 2 ? 'חודשיים' : `${m} חודשים`;
+  return y === 0 ? mm : `${yy} ${m > 2 ? 'ו-' : 'ו'}${mm}`;
+}
+function getAge(){
+  const bd = val('birthDate');
+  if(bd){
+    const b = new Date(bd + 'T00:00:00'), n = new Date();
+    if(!isNaN(b) && b < n){
+      let months = (n.getFullYear()-b.getFullYear())*12 + (n.getMonth()-b.getMonth());
+      if(n.getDate() < b.getDate()) months--;
+      return Math.max(0, months) / 12;
+    }
+  }
+  const raw = val('ageManual').replace(',', '.');
+  const a = parseFloat(raw);
+  return isFinite(a) && a > 0 && a < 30 ? a : null;
+}
+
+/* ============ רינדור ============ */
+function fieldHTML(q){
+  const ex = q.ex ? `<p class="hint">${esc(q.ex)}</p>` : '';
+  if(q.type === 'ta') return `<div class="field" style="grid-column:1/-1"><label for="${q.id}">${esc(q.label)}</label>${ex}<textarea id="${q.id}" rows="3"></textarea></div>`;
+  if(q.type === 'text') return `<div class="field" ${q.half?'':'style="grid-column:1/-1"'}><label for="${q.id}">${esc(q.label)}</label>${ex}<input id="${q.id}" type="text"></div>`;
+  const t = q.type === 'radio' ? 'radio' : 'checkbox';
+  return `<fieldset class="field" style="grid-column:1/-1" id="${q.id}F"><legend>${esc(q.label)}</legend>${ex}<div class="pills">${q.opts.map(o=>`<label class="pill"><input type="${t}" name="${q.id}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div>${q.detail?`<input id="${q.id}_d" type="text" class="detail" placeholder="${esc(q.detail)}" aria-label="${esc(q.detail)}">`:''}</fieldset>`;
+}
+function sectionHTML(s){
+  return `<section class="panel intake-only"><header><h2>${esc(s.title)}</h2>${s.note?`<p class="note">${esc(s.note)}</p>`:''}</header><div class="grid">${s.qs.map(fieldHTML).join('')}</div>${s.goal?'<p class="goal" id="goalSentence"></p>':''}</section>`;
+}
+function genericValue(q){
+  if(q.type === 'ta' || q.type === 'text') return val(q.id);
+  const v = q.type === 'radio' ? radioVal(q.id) : checkedVals(q.id).join(', ');
+  const d = q.detail ? val(q.id + '_d') : '';
+  return [v, d].filter(Boolean).join('. ');
+}
+$('#genericA').outerHTML = GEN_A.map(sectionHTML).join('');
+$('#genericB').outerHTML = GEN_B.map(sectionHTML).join('');
+
+// answers persist across age changes
+const answers = {};
+function snapshotAnswers(){
+  $$('#skills input:checked, #attn input:checked').forEach(i => answers[i.name] = i.value);
+  $$('#checks input[type=checkbox]').forEach(i => answers[i.id] = i.checked);
+  $$('#checks input[type=radio]:checked').forEach(i => answers[i.name] = i.value);
+  $$('#checks textarea').forEach(t => answers[t.id] = t.value);
+}
+function restoreAnswers(){
+  $$('#skills input, #attn input, #checks input[type=radio]').forEach(i => { if(answers[i.name] === i.value) i.checked = true; });
+  $$('#checks input[type=checkbox]').forEach(i => { if(answers[i.id]) i.checked = true; });
+  $$('#checks textarea').forEach(t => { if(answers[t.id]) t.value = answers[t.id]; });
+}
+function itemsFor(age){ return ITEMS.filter(it => age >= it[2] && age < it[3] + 1); }
+function scaleHTML(name, opts, label){
+  return `<div class="scale" role="radiogroup" aria-label="${esc(label)}">${opts.map(o=>`<label class="chip" data-v="${o.v}"><input type="radio" name="${name}" value="${o.v}"><span>${o.l}</span></label>`).join('')}</div>`;
+}
+function renderAgeParts(){
+  snapshotAnswers();
+  const age = getAge();
+  const hint = $('#ageHint');
+  if(val('birthDate') && age != null){ $('#ageManual').value = ageText(age); $('#ageManual').readOnly = true; hint.textContent = 'הגיל חושב לפי תאריך הלידה.'; }
+  else { $('#ageManual').readOnly = false; hint.textContent = 'אם הזנתם תאריך לידה, הגיל מחושב לבד.'; }
+  if(age == null){
+    $('#skills').innerHTML = `<p class="empty">הזינו תאריך לידה או גיל בראש השאלון, והיכולות שמתאימות לגיל יופיעו כאן.</p>`;
+    $('#checks').innerHTML = `<p class="empty">התחומים יופיעו אחרי שתזינו גיל.</p>`;
+    $('#attn').innerHTML = `<p class="empty">התחום יופיע אחרי שתזינו גיל.</p>`;
+    return;
+  }
+  if(age < 1){
+    $('#skills').innerHTML = `<p class="empty">השאלון מיועד לילדים מגיל שנה. לתינוקות צעירים יותר נדבר על ההתפתחות בפגישה.</p>`;
+  } else {
+    const list = itemsFor(age);
+    $('#skills').innerHTML = DOMAINS.map(d => {
+      const its = list.filter(i => i[1] === d.id);
+      if(!its.length) return '';
+      return `<div class="domain" data-d="${d.id}"><div class="dhead"><h3>${d.name}</h3><span class="count" data-count="${d.id}"></span></div>${its.map(it=>`<div class="item"><p class="q">${esc(it[4])}</p>${it[5]?`<p class="hint">לדוגמה: ${esc(it[5])}</p>`:''}${scaleHTML('r_'+it[0], SCALE, it[4])}</div>`).join('')}</div>`;
+    }).join('');
+  }
+  // checklists
+  let ch = '';
+  CHECKS.forEach(c => {
+    if(age < c.min) return;
+    ch += `<div class="domain"><div class="dhead"><h3>${c.name}</h3></div><div class="checks" data-group="${c.id}">`;
+    c.items.forEach(it => { if(it[3] && age < it[3]) return; ch += `<label class="check"><input type="checkbox" id="c_${it[0]}" data-g="${c.id}"><span>${esc(it[1])}${it[2]?`<span class="hint">לדוגמה: ${esc(it[2])}</span>`:''}</span></label>`; });
+    ch += `<label class="check"><input type="checkbox" id="c_${c.id}_none" data-g="${c.id}" data-x="1"><span>אין קושי בתחום זה</span></label><label class="check"><input type="checkbox" id="c_${c.id}_dk" data-g="${c.id}" data-x="1"><span>לא יודע</span></label></div>`;
+    if(c.extra) ch += `<div class="field"><label for="c_${c.id}_extra">${esc(c.extra)}</label><textarea id="c_${c.id}_extra" rows="2"></textarea></div>`;
+    ch += `</div>`;
+    if(c.id === 'art' && age >= 2){
+      ch += `<div class="domain"><div class="dhead"><h3>כמה מבינים את הדיבור שלו</h3></div><p class="hint">בחרו את התיאור שהכי מתאים.</p><div class="checks">${INTEL.map(o=>`<label class="check"><input type="radio" name="intel" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div></div>`;
+    }
+  });
+  $('#checks').innerHTML = ch;
+  $('#attn').innerHTML = age < 3 ? `<p class="empty">התחום הזה מוצג מגיל 3.</p>` :
+    ATTN.map(a=>`<div class="item"><p class="q">${esc(a[1])}</p>${a[2]?`<p class="hint">לדוגמה: ${esc(a[2])}</p>`:''}${scaleHTML('q_'+a[0], FREQ, a[1])}</div>`).join('');
+  restoreAnswers();
+  updateCounts();
+}
+function updateCounts(){
+  DOMAINS.forEach(d => {
+    const box = $(`#skills [data-d="${d.id}"]`); if(!box) return;
+    const total = $$('.item', box).length, done = $$('input:checked', box).length;
+    $(`[data-count="${d.id}"]`).textContent = `${done} מתוך ${total}`;
+  });
+}
+document.addEventListener('change', e => {
+  const t = e.target;
+  if(t.closest('#skills')) updateCounts();
+  if(t.matches('#checks input[type=checkbox]') && t.checked){
+    const g = t.dataset.g;
+    $$(`#checks input[data-g="${g}"]`).forEach(o => { if(o !== t && (t.dataset.x || o.dataset.x)) o.checked = false; });
+  }
+});
+['birthDate','ageManual'].forEach(id => document.getElementById(id).addEventListener('input', renderAgeParts));
+$('#birthDate').addEventListener('change', renderAgeParts);
+$('#childId').addEventListener('blur', () => idHint('childId','childIdHint'));
+function idHint(inputId, hintId){
+  const v = val(inputId), el = document.getElementById(inputId), h = hintId && document.getElementById(hintId);
+  const bad = v && !isValidIsraeliId(v);
+  el.classList.toggle('invalid', !!bad);
+  if(h){ h.textContent = bad ? 'מספר הזהות לא תקין. בדקו את הספרות ואת ספרת הביקורת.' : 'תשע ספרות, כולל ספרת ביקורת.'; h.classList.toggle('errmsg', !!bad); }
+  return !bad;
+}
+
+// goal sentence
+function goalSentence(){
+  const n = val('childName') || 'הילד';
+  const w = val('goWhat'), p = val('goWhere'), y = val('goWhy');
+  if(!w && !p && !y) return '';
+  return `בעוד כמה חודשים הייתי רוצה ש${n} ${w || '...'}${p ? ', ' + p : ''}${y ? ', כדי ש' + y.replace(/^כדי ש/,'') : ''}.`;
+}
+function updateGoal(){
+  const el = $('#goalSentence'); if(!el) return;
+  const s = goalSentence();
+  el.innerHTML = s ? `<b>במשפט אחד:</b> ${esc(s)}` : `<b>במשפט אחד:</b> כשתמלאו את שלוש השאלות, הן יתחברו כאן למשפט אחד שמתאר את המטרה.`;
+}
+document.addEventListener('input', e => { if(['goWhat','goWhere','goWhy','childName'].includes(e.target.id)) updateGoal(); });
+
+/* ============ הסכם וויתור ============ */
+const CONTRACT_INTRO = [
+  'הורים יקרים,',
+  'לפניכם חוזה טיפולי, הכולל את נהלי הטיפול בקליניקה. אנא קראו את הנהלים בעיון. שמירה על הנהלים חשובה לטיפול יעיל ואיכותי לילדכם. אתם מוזמנים לפנות אליי בכל שאלה, על הטופס ובכלל.',
+  'אני מאחלת לכולנו טיפול יעיל ופורה!'
+];
+const CONTRACT_DECL = 'אני החתום/ה מטה קראתי את הנהלים ומצאתי אותם מקובלים עליי, ולפיכך באתי על החתום.';
+function contractSections(){
+  const C = CONFIG;
+  const sess = C.sessionPrice ? `מחיר כל פגישה טיפולית הוא ${money(C.sessionPrice)}.` : 'מחיר פגישה טיפולית הוא לפי המחירון שנמסר להורים.';
+  const par = C.parentMeetingPrice ? `מחיר פגישת הורים, במידת הצורך, הוא ${money(C.parentMeetingPrice)}, והיא נמשכת כשעה.` : 'פגישת הורים, במידת הצורך, נמשכת כשעה, ומחירה לפי המחירון שנמסר להורים.';
+  return [
+    'במהלך הפגישה הראשונה תתבצע הערכה, כדי לקבוע את מטרות הטיפול. לעיתים נדרשת פגישה נוספת להשלמת ההערכה, בהתאם לגורמים שונים, כגון אבחון עדכני, גיל הילד ושיתוף הפעולה.',
+    'הרצף הטיפולי הוא קריטי להתקדמות הטיפול, וקטיעת הרצף עלולה להאט את קצב ההתקדמות.',
+    'שני ביטולים ברצף עלולים להוביל להפסקת הטיפול.',
+    `במקרה של ביטול יש להודיע ${C.cancelHours} שעות מראש. אחרת יחול חיוב מלא בגין הטיפול.`,
+    `משך פגישה הוא ${C.sessionMinutes} דקות: כ-${C.treatmentMinutes} דקות טיפול, לאחריהן מספר דקות לשיחה עם ההורה, ויתרת הזמן לתיעוד בתיק הטיפול.`,
+    'בסוף כל טיפול תקבלו הנחיות לתרגול בבית עם ילדכם. ההמשך בבית משמעותי להצלחת הטיפול, והקפדה על התרגול לפי ההנחיות תוביל לתוצאות טובות יותר.',
+    `${sess} ${par}`,
+    'עבור כתיבת דו"ח ייגבה תשלום בגובה פגישה טיפולית. הדבר כולל את דו"ח הסיכום שייכתב בסיום הטיפול, וכן כל דו"ח שההורים יבקשו לקבל במהלך הטיפול.',
+    'האחריות על ילדכם היא עליכם. הבאתו לטיפול ואיסופו בסיומו, במועד שנקבע, הם באחריותכם. איחור בהגעה לטיפול לא יאריך את שעת סיום הטיפול.',
+    'התשלום יתבצע בצ\'ק, במזומן, בהעברה בנקאית או באפליקציית פייבוקס, מדי שבוע, שבועיים או חודש.',
+    'במקרים רבים אפשר לקבל החזר חלקי על הטיפול מקופות החולים או מחברות הביטוח הפרטיות, בהצגת קבלה. האחריות לבירור הזכאות ולקבלת ההחזרים היא על ההורים בלבד. אם לצורך ההחזר נדרשים מסמכים מקלינאית התקשורת, אשמח לסייע.'
+  ];
+}
+function renderContract(){
+  const C = CONFIG;
+  $('#contractDoc').innerHTML = `<div class="parties">${CONTRACT_INTRO.map(p=>`<p>${esc(p)}</p>`).join('')}<p style="margin-top:6px"><b>${esc(C.clinicianName)}</b>, ${esc(C.clinicianTitle)}</p></div><ol>${contractSections().map(t=>`<li><p>${esc(t)}</p></li>`).join('')}</ol>`;
+}
+function waiverText(){
+  const n = val('childName') || '__________', id = val('childId');
+  const C = CONFIG;
+  return [
+    `אני/אנו החתומים מטה, הורי הקטין/ה ${n}${id?`, ת"ז ${id}`:''}, נותנים בזה רשות ל${C.clinicianName}, ${C.clinicianTitle}${C.license?`, מ.ר. ${C.license}`:''}, למסור ולקבל חוות דעת וממצאי אבחונים מעובדי מקצועות הבריאות (הפרעות בתקשורת, ריפוי בעיסוק, פיזיותרפיה ואחרים), רופאים, פסיכולוגים וכל גורם חינוכי (לרבות מורה, מחנך, יועץ, גננת, מטפלת ומנהל), וכל מידע שימצא לנכון על בננו/בתנו, ופוטרים אותה מחובת השמירה על סודיות רפואית בנדון, ביחס לגורמים שסומנו להלן.`,
+    `ידוע לנו כי:`,
+    `המידע יימסר רק במידה הנדרשת לתיאום הטיפול ולקידומו.`,
+    `ההסכמה ניתנת מרצון, והיא אינה תנאי לקבלת טיפול.`,
+    `אפשר לבטל את ההסכמה בכל עת בהודעה בכתב לקלינאית. הביטול לא יחול על מידע שכבר נמסר לפני כן.`
+  ];
+}
+function renderWaiver(){
+  const t = waiverText();
+  $('#waiverDoc').innerHTML = `<p>${esc(t[0])}</p><p><b>${esc(t[1])}</b></p><ol>${t.slice(2).map(x=>`<li><p>${esc(x)}</p></li>`).join('')}</ol>`;
+  if(!$('#wRecipients').children.length){
+    $('#wRecipients').innerHTML = RECIPIENTS.map((r,i)=>`<div><label class="check"><input type="checkbox" id="wr${i}" value="${esc(r)}"><span>${esc(r)}</span></label><input type="text" id="wr${i}_d" class="detail" placeholder="שם או פרטים (לא חובה)" aria-label="פרטים עבור ${esc(r)}" hidden></div>`).join('');
+    $$('#wRecipients input[type=checkbox]').forEach(cb => { if(cb.value !== 'אחר'){ cb.checked = true; document.getElementById(cb.id+'_d').hidden = false; } cb.addEventListener('change', () => { document.getElementById(cb.id+'_d').hidden = !cb.checked; }); });
+  }
+}
+$$('input[name=wConsent]').forEach(r => r.addEventListener('change', () => { $('#waiverYes').hidden = radioVal('wConsent') !== 'yes'; if(radioVal('wConsent')==='yes') pads.sig3.resize(); }));
+$$('input[name=wVal]').forEach(r => r.addEventListener('change', () => { $('#wValDate').hidden = radioVal('wVal') !== 'date'; }));
+
+/* ============ חתימות ============ */
+function makePad(canvas){
+  const box = canvas.parentElement;
+  let strokes = [], cur = null;
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const r = canvas.getBoundingClientRect(); if(!r.width) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width*dpr); canvas.height = Math.round(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); draw(ctx, r.width, r.height);
+  }
+  function draw(c, w, h){
+    c.clearRect(0,0,w,h); c.lineCap='round'; c.lineJoin='round'; c.strokeStyle='#14213d'; c.lineWidth=Math.max(2, w/260);
+    strokes.forEach(s => { c.beginPath(); s.forEach((p,i)=> i ? c.lineTo(p[0]*w,p[1]*h) : c.moveTo(p[0]*w,p[1]*h)); if(s.length===1) c.lineTo(s[0][0]*w+0.5,s[0][1]*h); c.stroke(); });
+  }
+  function pt(e){ const r = canvas.getBoundingClientRect(); return [(e.clientX-r.left)/r.width, (e.clientY-r.top)/r.height]; }
+  canvas.addEventListener('pointerdown', e => { e.preventDefault(); try{canvas.setPointerCapture(e.pointerId);}catch(_){} cur=[pt(e)]; strokes.push(cur); box.classList.add('has'); const sg = box.closest('.sig'); if(sg){ sg.classList.remove('invalid'); const m = sg.querySelector(':scope > .errmsg'); if(m) m.remove(); } resize(); });
+  canvas.addEventListener('pointermove', e => { if(!cur) return; e.preventDefault(); cur.push(pt(e)); const r=canvas.getBoundingClientRect(); draw(ctx,r.width,r.height); });
+  const end = () => { cur = null; };
+  canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
+  return {
+    resize, isEmpty: () => !strokes.some(s => s.length > 2),
+    clear(){ strokes = []; box.classList.remove('has'); resize(); },
+    image(w=900,h=300){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); return c; }
+  };
+}
+const pads = { sig1: makePad($('#sig1')), sig2: makePad($('#sig2')), sig3: makePad($('#sig3')) };
+$$('[data-clear]').forEach(b => b.addEventListener('click', () => pads[b.dataset.clear].clear()));
+window.addEventListener('resize', () => Object.values(pads).forEach(p => p.resize()));
+
+/* ============ ניווט ובדיקות ============ */
+let step = 1, maxStep = 1;
+function markErr(el, msg){
+  if(!el) return;
+  const wrap = el.closest('.field, .check, .sig') || el;
+  wrap.classList.add('invalid');
+  if(msg && !wrap.querySelector('.errmsg')){ const p = document.createElement('p'); p.className='errmsg'; p.textContent = msg; wrap.appendChild(p); }
+}
+function clearErrs(scope){ $$('.invalid', scope).forEach(e => e.classList.remove('invalid')); $$('.field > .errmsg:not(.hint), .check > .errmsg, .sig > .errmsg', scope).forEach(e => e.remove()); }
+function validate(s){
+  const scope = document.getElementById('step'+s); clearErrs(scope);
+  const errs = [];
+  const need = (cond, el, msg) => { if(!cond){ markErr(el, msg); errs.push(el); } };
+  if(s === 1){
+    need(val('childName'), $('#childName'), 'נא לכתוב את שם הילד.');
+    if(MODE === 'intake') need(getAge() != null, $('#ageManual'), 'נא להזין תאריך לידה או גיל.');
+    need(val('respName'), $('#respName'), MODE === 'intake' ? 'נא לכתוב את שם ממלא השאלון.' : 'נא לכתוב את שם ההורה.');
+    if(val('childId') && !isValidIsraeliId(val('childId'))) need(false, $('#childId'), 'מספר הזהות לא תקין.');
+  }
+  if(s === 2){
+    need(val('c1Name'), $('#c1Name'), 'נא לכתוב שם מלא.');
+    need(isValidIsraeliId(val('c1Id')), $('#c1Id'), 'נא להזין מספר זהות תקין.');
+    need(!pads.sig1.isEmpty(), $('#sig1box'), 'נא לחתום.');
+    if(val('c2Id')) need(isValidIsraeliId(val('c2Id')), $('#c2Id'), 'מספר הזהות לא תקין.');
+    if(!pads.sig2.isEmpty()) need(val('c2Name'), $('#c2Name'), 'נא לכתוב את שם ההורה הנוסף שחתם.');
+    need($('#guardOk').checked, $('#guardOk'), 'נא לאשר את ההצהרה.');
+    need($('#agreeOk').checked, $('#agreeOk'), 'נא לאשר את הנהלים.');
+  }
+  if(s === 3){
+    const c = radioVal('wConsent');
+    need(c, $('#wConsentF .pills'), 'נא לבחור אחת מהאפשרויות.');
+    if(c === 'yes'){
+      need($$('#wRecipients input[type=checkbox]:checked').length, $('#wRecipients'), 'נא לסמן לפחות גורם אחד.');
+      need(val('wName'), $('#wName'), 'נא לכתוב שם מלא.');
+      need(isValidIsraeliId(val('wId')), $('#wId'), 'נא להזין מספר זהות תקין.');
+      if(radioVal('wVal') === 'date') need(val('wValDate'), $('#wValDate'), 'נא לבחור תאריך.');
+      need(!pads.sig3.isEmpty(), $('#sig3box'), 'נא לחתום.');
+    }
+  }
+  if(errs.length){ const first = errs[0]; (first.closest('.field, .check, .sig') || first).scrollIntoView({block:'center'}); const f = first.matches('input,textarea,select') ? first : first.querySelector && first.querySelector('input'); if(f) setTimeout(()=>f.focus({preventScroll:true}),300); return false; }
+  return true;
+}
+function go(n){
+  if(n > step){ for(const s of STEPS){ if(s < step || s >= n) continue; if(!validate(s)){ if(s !== step) show(s); return; } } }
+  show(n);
+}
+function show(n){
+  step = n; maxStep = Math.max(maxStep, n);
+  $$('.step').forEach(s => s.hidden = Number(s.dataset.step) !== n);
+  $$('#stepper li').forEach(li => { const s = Number(li.dataset.s); li.classList.toggle('cur', s === n); li.classList.toggle('done', s < n || (s <= maxStep && s !== n)); });
+  if(n === 2){ renderContract(); if(!val('c1Name')) $('#c1Name').value = val('respName'); }
+  if(n === 3){ renderWaiver(); if(!val('wName')) $('#wName').value = val('c1Name'); if(!val('wId')) $('#wId').value = val('c1Id'); }
+  if(n === 4) renderSummary();
+  requestAnimationFrame(() => { Object.values(pads).forEach(p => p.resize()); window.scrollTo({top:0}); });
+}
+$$('[data-next]').forEach(b => b.addEventListener('click', () => go(Number(b.dataset.next))));
+$$('#stepper button').forEach(b => b.addEventListener('click', () => go(Number(b.closest('li').dataset.s))));
+document.addEventListener('input', e => { const w = e.target.closest('.invalid'); if(w){ w.classList.remove('invalid'); const m = w.querySelector(':scope > .errmsg'); if(m) m.remove(); } });
+document.addEventListener('change', e => { const w = e.target.closest('.invalid'); if(w){ w.classList.remove('invalid'); const m = w.querySelector(':scope > .errmsg'); if(m) m.remove(); } });
+
+/* ============ איסוף נתונים ============ */
+const LBL = Object.fromEntries([...SCALE, ...FREQ].map(o => [o.v, o.l]));
+function collect(){
+  const age = getAge();
+  const d = {
+    child: [
+      ['שם הילד', val('childName')], ['תאריך לידה', fmtDate(val('birthDate'))], ['גיל', ageText(age)],
+      ['מין', radioVal('sex')], ['תעודת זהות', val('childId')], ['קופת חולים', val('hmo')],
+      ['כתובת', val('address')], ['מסגרת חינוכית', val('framework')]
+    ],
+    family: [
+      ['ממלא השאלון', [val('respName'), radioVal('respRel')].filter(Boolean).join(', ')], ['טלפון', val('respPhone')], ['דוא"ל', val('respEmail')],
+      ['הורה נוסף', val('p2Name')], ['טלפון הורה נוסף', val('p2Phone')],
+      ['אחים ואחיות', radioVal('sib') === 'יש' ? ['יש', val('sibCount') && `${val('sibCount')} אחים ואחיות`, val('sibAges')].filter(Boolean).join('. ') : radioVal('sib')]
+    ],
+    genA: GEN_A.map(s => ({title:s.title, rows:s.qs.map(q => [q.label, genericValue(q)])})),
+    genB: GEN_B.map(s => ({title:s.title, rows:s.qs.map(q => [q.label, genericValue(q)]), goal: s.goal ? goalSentence() : ''})),
+    skills: [], checks: [], intel: '', attn: []
+  };
+  if(age != null && age >= 1){
+    const list = itemsFor(age);
+    DOMAINS.forEach(dm => {
+      const its = list.filter(i => i[1] === dm.id); if(!its.length) return;
+      d.skills.push({name: dm.name, rows: its.map(i => ({text:i[4], v: radioVal('r_'+i[0]), l: LBL[radioVal('r_'+i[0])] || ''}))});
+    });
+  }
+  if(age != null){
+    CHECKS.forEach(c => {
+      if(age < c.min) return;
+      const sel = c.items.filter(it => { const el = document.getElementById('c_'+it[0]); return el && el.checked; }).map(it => it[1]);
+      if($('#c_'+c.id+'_none')?.checked) sel.push('אין קושי בתחום זה');
+      if($('#c_'+c.id+'_dk')?.checked) sel.push('לא יודע');
+      d.checks.push({name:c.name, sel, extra: c.extra ? val('c_'+c.id+'_extra') : '', extraLabel: c.extra || ''});
+    });
+    d.intel = radioVal('intel');
+    if(age >= 3) d.attn = ATTN.map(a => ({text:a[1], v: radioVal('q_'+a[0]), l: LBL[radioVal('q_'+a[0])] || ''}));
+  }
+  const valid = radioVal('wVal');
+  d.contract = {
+    p1: {name: val('c1Name'), id: val('c1Id'), sig: pads.sig1.isEmpty() ? null : pads.sig1.image()},
+    p2: {name: val('c2Name'), id: val('c2Id'), sig: pads.sig2.isEmpty() ? null : pads.sig2.image()},
+    guard: $('#guardOk').checked, agree: $('#agreeOk').checked
+  };
+  d.waiver = {
+    consent: radioVal('wConsent'),
+    recipients: $$('#wRecipients input[type=checkbox]:checked').map(cb => [cb.value, val(cb.id+'_d')].filter(Boolean).join(': ')),
+    dir: radioVal('wDir'),
+    validity: valid === 'end' ? 'עד סיום הטיפול' : valid === '12' ? '12 חודשים מיום החתימה' : `עד ${fmtDate(val('wValDate'))}`,
+    name: val('wName'), id: val('wId'), sig: pads.sig3.isEmpty() ? null : pads.sig3.image()
+  };
+  d.date = todayStr();
+  return d;
+}
+
+/* ============ סיכום וטקסט ============ */
+const SEV_ORDER = {sev:0, mod:1, f3:0, f2:1};
+function flagsOf(d){
+  const f = [];
+  d.skills.forEach(s => s.rows.forEach(r => { if(r.v === 'sev' || r.v === 'mod') f.push({t:r.text, l:r.l, o:SEV_ORDER[r.v]}); }));
+  d.attn.forEach(r => { if(r.v === 'f3' || r.v === 'f2') f.push({t:r.text, l:r.l, o:SEV_ORDER[r.v]}); });
+  return f.sort((a,b) => a.o - b.o);
+}
+function summaryText(d){
+  const L = [];
+  const kv = rows => rows.forEach(([k,v]) => { if(v) L.push(`${k}: ${v}`); });
+  if(MODE === 'contract'){
+    L.push(`חוזה טיפולי וויתור סודיות, ${CONFIG.clinicianName}`, `תאריך: ${d.date}`, `שם הילד: ${val('childName')}`, '');
+    L.push('חוזה טיפולי', `נחתם על ידי: ${d.contract.p1.name}${d.contract.p2.sig ? ', ' + d.contract.p2.name : ''}`, '');
+    L.push('ויתור סודיות', d.waiver.consent === 'yes' ? `אושר עבור: ${d.waiver.recipients.join('; ')}. ${d.waiver.dir}. תוקף: ${d.waiver.validity}.` : 'לא אושר בשלב זה.');
+    return L.join('\n');
+  }
+  L.push(`שאלון קבלה ומיפוי התפתחותי, ${CONFIG.clinicianName}`, `תאריך מילוי: ${d.date}`, '');
+  L.push('פרטי הילד'); kv(d.child); kv(d.family); L.push('');
+  d.genA.forEach(s => { L.push(s.title); kv(s.rows); L.push(''); });
+  if(d.skills.length){ L.push('מיפוי יכולות'); d.skills.forEach(s => { L.push(`[${s.name}]`); s.rows.forEach(r => L.push(`${r.text}: ${r.l || 'לא סומן'}`)); }); L.push(''); }
+  d.checks.forEach(c => { L.push(`${c.name}: ${c.sel.length ? c.sel.join('; ') : 'לא סומן'}`); if(c.extra) L.push(`${c.extraLabel} ${c.extra}`); });
+  if(d.intel) L.push(`מובנות הדיבור: ${d.intel}`);
+  if(d.attn.length){ L.push('', 'קשב וריכוז'); d.attn.forEach(r => L.push(`${r.text}: ${r.l || 'לא סומן'}`)); }
+  L.push('');
+  d.genB.forEach(s => { L.push(s.title); kv(s.rows); if(s.goal) L.push(`במשפט אחד: ${s.goal}`); L.push(''); });
+  return L.join('\n').trim();
+}
+function renderSummary(){
+  const d = collect();
+  const answered = d.skills.reduce((n,s) => n + s.rows.filter(r => r.v).length, 0);
+  const total = d.skills.reduce((n,s) => n + s.rows.length, 0);
+  $('#sumLead').textContent = MODE === 'intake'
+    ? `${val('childName')}, ${ageText(getAge())}. סומנו ${answered} מתוך ${total} יכולות.`
+    : `${val('childName')}. החוזה הטיפולי נחתם${d.waiver.consent === 'yes' ? ', וגם טופס ויתור הסודיות' : '. ויתור הסודיות לא אושר בשלב זה'}.`;
+  const f = MODE === 'intake' ? flagsOf(d) : [];
+  $('#flagsWrap').innerHTML = f.length ? `<h3>תחומים שסימנתם בהם קושי בינוני או רב</h3><ul class="flags">${f.map(x=>`<li><span>${esc(x.t)}</span><span>${esc(x.l)}</span></li>`).join('')}</ul>` : '';
+  $('#copyBox').value = summaryText(d);
+  $('#saveStatus').textContent = ''; $('#saveStatus').className = 'status';
+}
+
+/* ============ יצירת PDF (בדפדפן בלבד) ============ */
+let logoImg = null;
+function loadLogo(){ return new Promise(res => { if(logoImg) return res(logoImg); const i = new Image(); i.onload = () => { logoImg = i; res(i); }; i.onerror = () => res(null); i.src = LOGO_SRC; }); }
+
+async function buildPdf(d){
+  try { await Promise.all(['400 26px Assistant','700 26px Assistant','600 26px Assistant','400 44px Bellefair'].map(f => document.fonts.load(f))); } catch(e) {}
+  const logo = await loadLogo();
+  const W = 1240, H = 1754, M = 100, R = W - M, MAXW = W - 2*M;
+  const BODY = 'Assistant, "Arial Hebrew", Arial, sans-serif', DISP = 'Bellefair, "Frank Ruhl Libre", Georgia, serif';
+  const INK = '#1e1e1b', MUTED = '#64635c', LINE = '#dddcd4', SEED = '#e8b818', SEEDINK = '#755800';
+  const BOTTOM = H - 120;
+  const childName = d.child[0][1];
+  const C = CONFIG;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({unit:'pt', format:'a4', compress:true});
+  pdf.setProperties({title:`שאלון קבלה - ${childName}`, author: C.clinicianName, creator:'שאלון קבלה'});
+  const S = IS_MOBILE ? 1.25 : 1.7;
+  const total = render(0.05, 0, null);          // pass 1: count pages only
+  render(S, total, (c, i) => {                  // pass 2: draw and add each page right away
+    if(i) pdf.addPage();
+    pdf.addImage(c.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, 595.28, 841.89, undefined, 'FAST');
+  });
+  return pdf.output('blob');
+
+  function render(S, total, sink){
+  const pages = []; let ctx, y, cur = null;
+
+  function font(size, weight=400, fam=BODY){ return `${weight} ${size}px ${fam}`; }
+  function finish(){
+    if(!cur) return;
+    const x = ctx;
+    x.strokeStyle = LINE; x.lineWidth = 1; x.beginPath(); x.moveTo(M, H - 86); x.lineTo(R, H - 86); x.stroke();
+    x.direction = 'rtl'; x.font = font(19); x.fillStyle = MUTED;
+    x.textAlign = 'right'; x.fillText(`${C.clinicianName} · ${C.clinicianTitle} · ${C.phone}${C.email ? ' · ' + C.email : ''}`, R, H - 52);
+    x.textAlign = 'left'; x.fillText(`עמוד ${pages.length} מתוך ${total}`, M, H - 52);
+    if(sink) sink(cur, pages.length - 1);
+    cur.width = cur.height = 1; cur = null;
+  }
+  function newPage(){
+    finish();
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W*S)); c.height = Math.max(1, Math.round(H*S));
+    cur = c;
+    ctx = c.getContext('2d'); ctx.scale(S, S);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+    ctx.direction = 'rtl'; ctx.textBaseline = 'alphabetic';
+    pages.push(1);
+    if(pages.length === 1){
+      const lh = 190;
+      if(logo){ const lw = lh * logo.width / logo.height; ctx.drawImage(logo, R - lw, 56, lw, lh); }
+      const tx = R - (logo ? lh*logo.width/logo.height + 40 : 0);
+      ctx.fillStyle = INK; ctx.textAlign = 'right';
+      ctx.font = font(54, 400, DISP); ctx.fillText(MODE === 'intake' ? 'שאלון קבלה ומיפוי התפתחותי' : 'חוזה טיפולי וויתור סודיות', tx, 130);
+      ctx.font = font(28, 600); ctx.fillText(`${childName}${MODE === 'intake' && d.child[2][1] ? ', ' + d.child[2][1] : ''}`, tx, 182);
+      ctx.font = font(23); ctx.fillStyle = MUTED; ctx.fillText(`${MODE === 'intake' ? 'תאריך מילוי' : 'תאריך'}: ${d.date}`, tx, 220);
+      y = 280; hr(SEED, 2); y += 26;
+    } else {
+      ctx.textAlign = 'right'; ctx.fillStyle = MUTED; ctx.font = font(21);
+      ctx.fillText(`${MODE === 'intake' ? 'שאלון קבלה' : 'חוזה טיפולי'} · ${childName} · ${d.date}`, R, 70);
+      if(logo){ const lh = 58, lw = lh*logo.width/logo.height; ctx.drawImage(logo, M, 30, lw, lh); }
+      y = 100; hr(LINE, 1); y += 30;
+    }
+  }
+  function hr(color=LINE, w=1){ ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(R, y); ctx.stroke(); }
+  function ensure(h){ if(y + h > BOTTOM) newPage(); }
+  function wrap(text, maxW, f, firstMax){
+    ctx.font = f; const out = [];
+    String(text).split('\n').forEach(par => {
+      const words = par.split(/\s+/).filter(Boolean); let line = '';
+      if(!words.length){ out.push(''); return; }
+      words.forEach(w => {
+        const lim = out.length === 0 && firstMax ? firstMax : maxW;
+        const t = line ? line + ' ' + w : w;
+        if(ctx.measureText(t).width <= lim || !line) line = t; else { out.push(line); line = w; }
+      });
+      out.push(line);
+    });
+    return out;
+  }
+  function text(str, o={}){
+    const size = o.size || 25, f = font(size, o.weight || 400, o.fam || BODY), lh = size * (o.lh || 1.55);
+    const x = R - (o.indent || 0), mw = (o.maxW || MAXW) - (o.indent || 0);
+    wrap(str, mw, f).forEach(line => { ensure(lh); ctx.font = f; ctx.fillStyle = o.color || INK; ctx.textAlign = 'right'; ctx.fillText(line, x, y + size); y += lh; });
+    if(o.after) y += o.after;
+  }
+  function heading(str){
+    ensure(140); y += 22;
+    ctx.fillStyle = SEED; ctx.beginPath(); ctx.arc(R - 8, y + 24, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.font = font(40, 400, DISP); ctx.fillText(str, R - 30, y + 38);
+    y += 62;
+  }
+  function sub(str){ ensure(90); y += 10; text(str, {size:26, weight:700, color:SEEDINK, after:4}); }
+  function kv(label, value){
+    const size = 24, lh = size*1.55, fl = font(size, 700), fv = font(size);
+    const v = value && String(value).trim() ? String(value) : 'לא צוין';
+    ctx.font = fl; const lab = label.replace(/[?:]\s*$/,'') + ': '; const lw = ctx.measureText(lab).width;
+    const sameLine = lw < MAXW * 0.55;
+    if(!sameLine){ text(lab, {size, weight:700}); }
+    const lines = wrap(v, MAXW, fv, sameLine ? MAXW - lw : MAXW);
+    lines.forEach((line, i) => {
+      ensure(lh);
+      if(i === 0 && sameLine){ ctx.font = fl; ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.fillText(lab, R, y + size); }
+      ctx.font = fv; ctx.fillStyle = v === 'לא צוין' ? MUTED : INK; ctx.textAlign = 'right';
+      ctx.fillText(line, i === 0 && sameLine ? R - lw : R, y + size); y += lh;
+    });
+    y += 6;
+  }
+  const CHIP = {ok:['#e3eedf','#2d5527'], mild:['#fbefc6',INK], mod:['#f6d9ae',INK], sev:['#f0c6ba','#7a2716'], f0:['#ebebe6',INK], f1:['#ebebe6',INK], f2:['#f6d9ae',INK], f3:['#f0c6ba','#7a2716'], dk:['#ebebe6',MUTED], na:['#ebebe6',MUTED]};
+  function rateRow(t, v, l){
+    const size = 23, lh = size*1.5, chipW = 230, f = font(size);
+    const lines = wrap(t, MAXW - chipW - 30, f);
+    const h = Math.max(lines.length*lh, 44) + 16;
+    ensure(h);
+    lines.forEach((ln, i) => { ctx.font = f; ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.fillText(ln, R, y + 8 + size + i*lh); });
+    const [bg, fg] = CHIP[v] || ['#ffffff', MUTED];
+    const cy = y + 6;
+    ctx.fillStyle = bg; roundRect(M, cy, chipW, 42, 10); ctx.fill();
+    if(!v){ ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; roundRect(M, cy, chipW, 42, 10); ctx.stroke(); }
+    ctx.fillStyle = fg; ctx.font = font(21, 700); ctx.textAlign = 'center'; ctx.fillText(l || 'לא סומן', M + chipW/2, cy + 29);
+    y += h;
+    ctx.strokeStyle = '#ecebe5'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(M, y - 4); ctx.lineTo(R, y - 4); ctx.stroke();
+  }
+  function roundRect(x, yy, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, yy); ctx.arcTo(x+w, yy, x+w, yy+h, r); ctx.arcTo(x+w, yy+h, x, yy+h, r); ctx.arcTo(x, yy+h, x, yy, r); ctx.arcTo(x, yy, x+w, yy, r); ctx.closePath(); }
+  function checkLine(str, on){
+    const size = 23, lh = size*1.5, f = font(size);
+    const lines = wrap(str, MAXW - 50, f);
+    ensure(lines.length*lh + 6);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(R - 26, y + 6, 24, 24);
+    if(on){ ctx.beginPath(); ctx.moveTo(R - 21, y + 18); ctx.lineTo(R - 15, y + 25); ctx.lineTo(R - 6, y + 11); ctx.stroke(); }
+    lines.forEach((ln,i) => { ctx.font = f; ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.fillText(ln, R - 42, y + size + i*lh); });
+    y += lines.length*lh + 6;
+  }
+  function sigRow(list){
+    const gap = 60, colW = (MAXW - gap) / 2, bw = Math.min(380, colW), bh = 110;
+    ensure(250); y += 10;
+    list.forEach((b, i) => {
+      const xr = R - i * (colW + gap), xl = xr - colW;
+      ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.font = font(22, 700); ctx.fillText(b.label, xr, y + 22);
+      ctx.font = font(21); ctx.fillText(`${b.name || '_______________'}${b.id ? ',  ת"ז ' + b.id : ''}`, xr, y + 54);
+      ctx.fillStyle = MUTED; ctx.font = font(19); ctx.fillText(`תאריך: ${d.date}`, xr, y + 84);
+      const by = y + 96;
+      if(b.img) ctx.drawImage(b.img, xr - bw, by, bw, bh);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(xr - bw, by + bh + 4); ctx.lineTo(xr, by + bh + 4); ctx.stroke();
+      ctx.fillStyle = MUTED; ctx.textAlign = 'center'; ctx.font = font(18); ctx.fillText('חתימה', xr - bw/2, by + bh + 28);
+    });
+    y += 96 + bh + 46;
+  }
+  function sigBlock(label, name, id, img){
+    ensure(230); y += 10;
+    ctx.fillStyle = INK; ctx.textAlign = 'right'; ctx.font = font(23, 700);
+    ctx.fillText(label, R, y + 23);
+    ctx.font = font(23); ctx.fillText(`${name || '_______________'}${id ? ',  ת"ז ' + id : ''}`, R, y + 58);
+    ctx.fillStyle = MUTED; ctx.font = font(20); ctx.fillText(`תאריך: ${d.date}`, R, y + 90);
+    const bw = 420, bh = 140, bx = M, by = y;
+    if(img) ctx.drawImage(img, bx, by, bw, bh);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx, by + bh + 4); ctx.lineTo(bx + bw, by + bh + 4); ctx.stroke();
+    ctx.fillStyle = MUTED; ctx.textAlign = 'center'; ctx.font = font(19); ctx.fillText('חתימה', bx + bw/2, by + bh + 30);
+    y += bh + 56;
+  }
+
+  /* ---- תוכן ---- */
+  newPage();
+  if(MODE === 'intake'){
+  heading('פרטי הילד והמשפחה');
+  d.child.forEach(([k,v]) => kv(k, v));
+  y += 6; d.family.forEach(([k,v]) => kv(k, v));
+  d.genA.forEach(s => { heading(s.title); s.rows.forEach(([k,v]) => kv(k, v)); });
+
+  if(d.skills.length){
+    heading('מיפוי יכולות');
+    text('כל יכולת סומנה בהשוואה למצופה בגיל הילד.', {size:21, color:MUTED, after:6});
+    const fl = flagsOf(d);
+    if(fl.length){
+      sub('בקצרה: פריטים שסומנו בקושי בינוני או רב');
+      fl.forEach(x => rateRow(x.t, Object.keys(LBL).find(k => LBL[k] === x.l), x.l));
+      y += 8;
+    }
+    d.skills.forEach(s => { sub(s.name); s.rows.forEach(r => rateRow(r.text, r.v, r.l)); });
+  }
+  if(d.checks.length){
+    heading('דיבור, שטף, קול ואכילה');
+    d.checks.forEach(c => {
+      sub(c.name);
+      if(c.sel.length) c.sel.forEach(x => checkLine(x, true)); else text('לא סומן', {size:23, color:MUTED});
+      if(c.extra) kv(c.extraLabel, c.extra);
+      if(c.name === 'היגוי' && d.intel !== undefined){ kv('כמה מבינים את הדיבור שלו', d.intel); }
+    });
+  }
+  if(d.attn.length){ heading('קשב וריכוז'); text('סימנים לבירור בלבד, אינם אבחנה.', {size:21, color:MUTED, after:6}); d.attn.forEach(r => rateRow(r.text, r.v, r.l)); }
+  d.genB.forEach(s => { heading(s.title); s.rows.forEach(([k,v]) => kv(k, v)); if(s.goal){ y += 4; text('במשפט אחד: ' + s.goal, {size:24, weight:600, color:SEEDINK, after:6}); } });
+
+  } else {
+  // contract
+  heading('טופס קבלה לטיפולים');
+  const cid = d.child.find(r => r[0] === 'תעודת זהות')[1];
+  text(`שם הילד/ה: ${childName}${cid ? ` · ת"ז: ${cid}` : ''} · תאריך: ${d.date}`, {size:23, weight:700, after:10});
+  CONTRACT_INTRO.forEach(p => text(p, {size:21, after:0}));
+  text(`${C.clinicianName}, ${C.clinicianTitle}`, {size:21, weight:700, after:8});
+  contractSections().forEach((t, i) => { ensure(60); text(`${i+1}. ${t}`, {size:20.5, lh:1.45, after:3}); });
+  y += 6;
+  checkLine('אני מצהיר/ה שאני הורה או אפוטרופוס חוקי של הילד, ושההורה הנוסף יודע על הטיפול ומסכים לו, או שאני מוסמך/ת להחליט על כך לבדי.', d.contract.guard);
+  checkLine(CONTRACT_DECL, d.contract.agree);
+  const sigs = [{label:'הורה / אפוטרופוס', name:d.contract.p1.name, id:d.contract.p1.id, img:d.contract.p1.sig}];
+  if(d.contract.p2.sig || d.contract.p2.name) sigs.push({label:'הורה / אפוטרופוס נוסף', name:d.contract.p2.name, id:d.contract.p2.id, img:d.contract.p2.sig});
+  sigs.push({label:'הקלינאית', name:C.clinicianName, id:'', img:null});
+  for(let i = 0; i < sigs.length; i += 2) sigRow(sigs.slice(i, i + 2));
+
+  // waiver
+  newPage();
+  heading('ויתור על סודיות והסכמה להעברת מידע');
+  if(d.waiver.consent === 'yes'){
+    const t = waiverText();
+    text(t[0], {size:23, after:8});
+    sub('הגורמים שאושרו');
+    d.waiver.recipients.forEach(r => checkLine(r, true));
+    y += 4; kv('כיוון העברת המידע', d.waiver.dir); kv('תוקף ההסכמה', d.waiver.validity);
+    text(t[1], {size:23, weight:700, after:2});
+    t.slice(2).forEach((x,i) => text(`${i+1}. ${x}`, {size:22, indent:20, after:2}));
+    sigBlock('החותם/ת', d.waiver.name, d.waiver.id, d.waiver.sig);
+  } else {
+    text(`ההורים בחרו שלא לאשר העברת מידע לגורמים אחרים בשלב זה. אפשר לחתום על ויתור סודיות בהמשך, בכל עת.`, {size:24});
+  }
+  }
+
+  finish();
+  return pages.length;
+  }
+}
+
+/* ============ שמירה במכשיר ============ */
+let lastUrl = null, lastBlob = null;
+function setStatus(msg, kind=''){ const s = $('#saveStatus'); s.textContent = msg; s.className = 'status ' + kind; }
+function fileName(){
+  const n = (val('childName') || 'ילד').replace(/[\\/:*?"<>|]+/g,'').trim();
+  const dt = new Date(); const ds = `${dt.getDate()}-${dt.getMonth()+1}-${dt.getFullYear()}`;
+  return `${MODE === 'intake' ? 'שאלון קבלה' : 'חוזה טיפולי וויתור סודיות'} - ${n} - ${ds}.pdf`;
+}
+function saveViaLink(){
+  const a = document.createElement('a'); a.href = lastUrl; a.download = fileName(); a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function pdfFile(){ try { return new File([lastBlob], fileName(), {type:'application/pdf'}); } catch(_) { return null; } }
+function canSendFile(){ const f = lastBlob && pdfFile(); try { return !!(f && navigator.canShare && navigator.canShare({files:[f]})); } catch(_) { return false; } }
+function saveToDevice(){
+  if(!lastUrl) return;
+  saveViaLink();
+  setStatus(IS_MOBILE ? 'הקובץ נשמר בהורדות של הטלפון. אם לא מצאתם אותו, לחצו "פתיחת ה-PDF" ושמרו אותו מהמסך שנפתח.' : 'הקובץ נשמר בתיקיית ההורדות. אם לא מצאתם אותו, לחצו "פתיחת ה-PDF" ושמרו משם.', 'good');
+}
+async function sendFile(){
+  const f = lastBlob && pdfFile();
+  if(!f || !canSendFile()){ setStatus('השליחה הישירה לא נתמכת בדפדפן הזה. שמרו את הקובץ וצרפו אותו להודעת וואטסאפ או מייל.', 'bad'); return; }
+  try { await navigator.share({files:[f], title: fileName()}); setStatus('הקובץ נשלח. תודה!', 'good'); }
+  catch(err){ setStatus(err && err.name === 'AbortError' ? 'השליחה בוטלה. אפשר ללחוץ שוב על "שליחה".' : 'השליחה לא הצליחה. שמרו את הקובץ וצרפו אותו להודעה.', 'bad'); }
+}
+$('#savePdf').addEventListener('click', async () => {
+  const btn = $('#savePdf');
+  if(!window.jspdf){ setStatus('רכיב יצירת ה-PDF לא נטען. בדקו את החיבור לאינטרנט ורעננו את הדף. התשובות לא יישמרו אחרי רענון, אז אפשר קודם להעתיק את הסיכום.', 'bad'); return; }
+  btn.disabled = true; setStatus('יוצר את הקובץ, זה יכול לקחת כמה שניות...');
+  try {
+    const blob = await buildPdf(collect());
+    if(window.claude && typeof window.claude.use === 'function'){
+      let dl = null; try { dl = await window.claude.use('downloads'); } catch(_) {}
+      if(!dl){ setStatus('שמירת קבצים לא זמינה בתצוגה הזו. פתחו את השאלון דרך הקישור באתר הקליניקה, או העתיקו את הסיכום למטה.', 'bad'); return; }
+      try { await dl.save({filename: fileName(), data: blob}); setStatus('הקובץ נשמר במכשיר. אפשר לשלוח אותו לקלינאית.', 'good'); }
+      catch(err){
+        const code = err && err.code;
+        if(code === 'declined') setStatus('השמירה בוטלה. אפשר ללחוץ שוב בכל עת.', 'bad');
+        else if(code === 'rate_limited') setStatus('חלון שמירה כבר פתוח. סיימו אותו ונסו שוב.', 'bad');
+        else setStatus(`לא הצלחנו לשמור כאן (${code || 'שגיאה'}). העתיקו את הסיכום למטה, או פתחו את השאלון דרך האתר.`, 'bad');
+      }
+      return;
+    }
+    lastBlob = blob;
+    if(lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = URL.createObjectURL(blob);
+    $('#openPdf').hidden = false; $('#sharePdf').hidden = false; $('#sendInfo').hidden = false;
+    $('#sendPdf').hidden = !canSendFile();
+    if(IS_MOBILE){
+      // ask for a fresh tap: phones block saving that is not triggered directly by a tap
+      setStatus(canSendFile() ? 'הקובץ מוכן. לחצו "שמירה במכשיר" כדי לשמור אותו, או "שליחה" כדי לשלוח אותו לקלינאית.' : 'הקובץ מוכן. לחצו "שמירה במכשיר", ואז צרפו את הקובץ להודעת וואטסאפ או מייל לקלינאית.', 'good');
+      $('#sharePdf').focus();
+    } else {
+      saveToDevice();
+    }
+  } catch(e){
+    console.error(e); setStatus(`משהו השתבש ביצירת הקובץ (${(e && e.message || '').slice(0,80)}). נסו שוב, או העתיקו את הסיכום למטה.`, 'bad');
+  } finally { btn.disabled = false; }
+});
+$('#sharePdf').addEventListener('click', saveToDevice);
+$('#sendPdf').addEventListener('click', sendFile);
+$('#openPdf').addEventListener('click', () => { if(lastUrl){ const w = window.open(lastUrl, '_blank'); if(!w) location.href = lastUrl; } });
+$('#copyBtn').addEventListener('click', () => {
+  const box = $('#copyBox'); const t = box.value;
+  const fallback = () => { box.focus(); box.select(); setStatus('', ''); $('#copyBtn').textContent = 'הטקסט מסומן. העתיקו אותו ידנית'; };
+  try { navigator.clipboard.writeText(t).then(() => { $('#copyBtn').textContent = 'הסיכום הועתק'; setTimeout(()=>$('#copyBtn').textContent='העתקת הסיכום', 2500); }, fallback); } catch(e){ fallback(); }
+});
+$('#newBtn').addEventListener('click', () => { $('#newConfirm').hidden = false; });
+$('#newNo').addEventListener('click', () => { $('#newConfirm').hidden = true; });
+$('#newYes').addEventListener('click', () => { location.reload(); });
+
+if(IN_APP && !(window.claude && typeof window.claude.use === 'function')) $('#inAppWarn').hidden = false;
+$$('input[name=sib]').forEach(r => r.addEventListener('change', () => { const on = radioVal('sib') === 'יש'; $('#sibMore').hidden = !on; $('#sibMore2').hidden = !on; }));
+(function applyMode(){
+  if(MODE === 'contract'){
+    $('#root').classList.add('mode-contract');
+    $('#stepper li[data-s="1"] button').lastChild.textContent = 'פרטים';
+    $('#detailsTitle').textContent = 'פרטי הילד וההורים';
+    $('#respTitle').textContent = 'הורה / אפוטרופוס';
+    $('#newBtn').textContent = 'טופס חדש';
+    $('#newConfirm span').textContent = 'למחוק את כל הפרטים והחתימות ולהתחיל מחדש? מה שלא נשמר ב-PDF יאבד.';
+  } else {
+    $$('#stepper li[data-s="2"], #stepper li[data-s="3"]').forEach(li => li.hidden = true);
+    $('#stepper').classList.add('two');
+    $('#step1Next').dataset.next = '4'; $('#step1Next').textContent = 'סיימתי, לשמירה ושליחה';
+    $('#step4Back').dataset.next = '1';
+  }
+})();
+renderAgeParts(); updateGoal(); show(1);
+</script>
