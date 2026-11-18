@@ -1229,6 +1229,7 @@ $$('input[name=sib]').forEach(r => r.addEventListener('change', () => { const on
   } else {
     $$('#stepper li[data-s="2"], #stepper li[data-s="3"]').forEach(li => li.hidden = true);
     $('#stepper').classList.add('two');
+    $('#stepper li[data-s="4"] .dot').textContent = '2';
     $('#step1Next').dataset.next = '4'; $('#step1Next').textContent = 'סיימתי, לשמירה ושליחה';
     $('#step4Back').dataset.next = '1';
   }
